@@ -1,0 +1,10 @@
+*** Duplicatex-Changelog
+
+Version 1.0.0
+-------------
+2005-06-10
+*Initial release of duplicatic v1.0 (full version)
+
+Version 1.0.1
+-------------
+*Bugfix minerdlg.cpp: adding initial value for (sprache)

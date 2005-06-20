@@ -53,6 +53,7 @@ wxString Csprachen[] =
 CminerDlg::CminerDlg(wxWindow * parent)
 :wxPanel(parent, - 1, wxDefaultPosition, wxDefaultSize, 0, "")
 {
+    sprache=0;
     hostname = new char[9];
     strcpy(hostname, "hostname");
     localip = new char[16];
@@ -840,6 +841,8 @@ void CminerDlg::ImportDatabaseTXT(wxCommandEvent & event)
                             dbSMmData = dbSMtmp -> fetchKey(1, dbSMmKey);
                             if (dbSMmData.ptr)
                             {
+                    //(new CpicFrame((wxFrame *)((smApp *) wxTheApp) -> smuledlg,
+                    //(char *) dbSMmData.ptr, dbSMmData.size, 200, 540, (char *) tempKey.ptr)) -> Show();
                                 free(dbSMmData.ptr);
                                 dbSMmData.ptr = NULL;
                                 dbSMmData.size = 0;
