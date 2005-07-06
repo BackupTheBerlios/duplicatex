@@ -4,7 +4,7 @@ CFLAGS=-s -Wall
 WXFLAGS=-D__WXGTK__ -g `wx-config --cxxflags`
 LIBS=-lwx_gtk-2.4
 
-OBJS=duplicatex.o minerdlg.o picfidlg.o metfile.o metfile_tag.o \
+OBJS=duplicatex.o minerdlg.o picfidlg.o picframe.o metfile.o metfile_tag.o \
 	wxthread.o md4hash.o database.o
 
 PROG=duplicatex
@@ -16,6 +16,8 @@ duplicatex.o: duplicatex.cpp
 minerdlg.o: minerdlg.cpp
 	$(CC) $(CFLAGS) $(WXFLAGS) -c -o $@ $<
 picfidlg.o: picfidlg.cpp
+	$(CC) $(CFLAGS) $(WXFLAGS) -c -o $@ $<
+picframe.o: picframe.cpp
 	$(CC) $(CFLAGS) $(WXFLAGS) -c -o $@ $<
 metfile.o: metfile.cpp
 	$(CC) $(CFLAGS) $(WXFLAGS) -c -o $@ $<

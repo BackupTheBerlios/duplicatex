@@ -1,29 +1,25 @@
-/*
-**** Duplicatex v1.0
-**** Find and markup duplicate files and/or delete it.
-****
-**** Copyright (C) 2005 Frank Schaefer (sf@mulinux.org)
-****
-**** This program is free software; you can redistribute it and/or
-**** modify it under the terms of the GNU General Public License
-**** as published by the Free Software Foundation; either version 2
-**** of the License, or (at your option) any later version.
-**** 
-**** This program is distributed in the hope that it will be useful,
-**** but WITHOUT ANY WARRANTY; without even the implied warranty of
-**** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-**** GNU General Public License for more details.
-****
-**** You should have received a copy of the GNU General Public License
-**** along with this program; if not, write to the Free Software
-**** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
-
 #include "database.h"
+#include "picframe.h"
 #include <math.h>
+
+int BlockCounter = 0, BlockKeyCounter = 0;
+int kc0, bl0;
+int debugmode = 0;
 
 CDatabase::CDatabase(int indexanzahl, int index1size, char * filepath, char * filename)
 {
+    keys0Last.T = 1;
+    keys0Last.P = 0x7fffffff;
+    memset(keys0Last.K, 0xff, 128);
+    if (indexanzahl < 0)
+    {
+        rwmode = 0;
+        indexanzahl = - indexanzahl;
+    }
+    else
+    {
+        rwmode = 1;
+    }
     tempkey.ptr = (unsigned char *) malloc(128);
     dbDatapointer = NULL;
     dbIndexpointer = NULL;
@@ -73,16 +69,35 @@ CDatabase::~ CDatabase()
     free(tempkey.ptr);
 }
 
+void CDatabase::DebugBlkKeys(int position, int blocknumber1)
+{
+    int i, bni;
+    printf("vorher(pos=%d) bnr1=%d\n", position, blocknumber1);
+    for (bni = 1 ; bni <= indexlevel ; bni++)
+    {
+        KEYBLKREAD(blocknumber[bni], & indexblockheader, keys0);
+        printf("%d: bni=%d   %d=?=%d\n"
+        , bni, blocknumber[bni], keynumber[bni], indexblockheader.KeyCount);
+    }
+    i = 0;
+    while (i < indexblockheader.KeyCount)
+    {
+        ++i;
+        printf("(%d/%d): %s %d %d\n"
+        , i, indexblockheader.KeyCount, keys0[i] -> K, keys0[i] -> P, keys0[i] -> T);
+    }
+}
+
 void CDatabase::deleteKey(int indexID, DatabaseDatum key)
 {
     int cellid, status = 0;
     DatabaseDatum data;
     data.size = 0;
     data.ptr = NULL;
-    KEYDELETE( & key, indexID, cellid, status);
+    KEYDELETE(key, indexID, cellid, status);
     if (!status)
     {
-        CELLFREE(cellid);
+        //CELLFREE(cellid);
     }
 }
 
@@ -114,13 +129,123 @@ DatabaseDatum CDatabase::getPrevKey(int indexID, DatabaseDatum key)
     return data;
 }
 
+int CDatabase::reorgIndex(int indexID)
+{
+    int KeyCounter;
+    DatabaseDatum keyTmp;
+    DatabaseDatum keyTmp2;
+    DatabaseDatum dataTmp;
+    keyTmp.ptr = (unsigned char *) malloc(133);
+    keyTmp.size = 20;
+    keyTmp2.ptr = (unsigned char *) malloc(17);
+    keyTmp2.size = 16;
+    dataTmp.ptr = (unsigned char *) malloc(133);
+    dataTmp.size = 132;
+    (void) unlink("tmp.DBIDXi");
+    (void) unlink("tmp.DBIDXd");
+    CDatabase * tmpDB = new CDatabase(1, 16, "./", "tmp.DBIDX");
+    int x, cellid, status;
+    KeyCounter = 0;
+    BlockCounter = 0;
+    BlockKeyCounter = 0;
+    memset(keyTmp.ptr, 0, 133);
+    memset(keyTmp2.ptr, 0, 17);
+    do
+    {
+        status = 0;
+        cellid = 0;
+        KEYNEXT(keyTmp, indexID, cellid, status);
+        if (!status)
+        {
+            memset(dataTmp.ptr, 0, 132);
+            memcpy(dataTmp.ptr, & cellid, 4);
+            memcpy(dataTmp.ptr + 4, keyTmp.ptr, keyTmp.size);
+            dataTmp.size = 4 + keyTmp.size;
+            x = 0;
+            do
+            {
+                sprintf((char *) keyTmp2.ptr, "%08x%08x", rand() & 0xffffffff, rand() & 0xffffffff);
+                tmpDB -> KEYFETCH( & keyTmp2, indexID, cellid, status);
+                if (status)
+                {
+                    cellid = tmpDB -> CELLWRITE(0, & dataTmp);
+                    tmpDB -> KEYINSERT( & keyTmp2, indexID, cellid, status);
+                    //printf("keytmp(%d): %s key: %s\n", cellid, keyTmp2.ptr, keyTmp.ptr);
+                    ++x;
+                }
+                x = 1;
+            }
+            while (!x);
+            if (!status)
+            {
+                KeyCounter++;
+                KEYDELETE(keyTmp, indexID, cellid, status);
+            }
+            status = 0;
+        }
+    }
+    while (!status);
+ /*
+ printf("nachherALL1: %d BC=%d BKC=%d bl0=%d kc0=%d\n"
+ , KeyCounter, BlockCounter, BlockKeyCounter, bl0, kc0);
+    */
+    KeyCounter = 0;
+    BlockCounter = 0;
+    BlockKeyCounter = 0;
+    memset(keyTmp.ptr, 0, 133);
+    memset(keyTmp2.ptr, 0, 17);
+    free(dataTmp.ptr);
+    dataTmp.size = 0;
+    dataTmp.ptr = NULL;
+    do
+    {
+        status = 0;
+        cellid = 0;
+        tmpDB -> KEYNEXT(keyTmp2, indexID, cellid, status);
+        if (!status)
+        {
+            (void) tmpDB -> CELLREAD(cellid, & dataTmp);
+            memcpy( & cellid, dataTmp.ptr, 4);
+            keyTmp.size = dataTmp.size - 4;
+            memcpy(keyTmp.ptr, dataTmp.ptr + 4, keyTmp.size);
+            KEYFETCH( & keyTmp, indexID, cellid, status);
+            if (status)
+            {
+                memcpy( & cellid, dataTmp.ptr, 4);
+                keyTmp.size = dataTmp.size - 4;
+                memcpy(keyTmp.ptr, dataTmp.ptr + 4, keyTmp.size);
+                KEYINSERT( & keyTmp, indexID, cellid, status);
+                memcpy( & cellid, dataTmp.ptr, 4);
+ /*
+ printf("keytmp(%d): %s key: %s\n", cellid, keyTmp2.ptr, keyTmp.ptr);
+    */
+                KeyCounter++;
+            }
+            status = 0;
+        }
+    }
+    while (!status);
+ /*
+ printf("nachherALL2: %d BC=%d BKC=%d bl0=%d kc0=%d\n"
+ , KeyCounter, BlockCounter, BlockKeyCounter, bl0, kc0);
+    */
+    if (dataTmp.ptr)
+    {
+        free(dataTmp.ptr);
+    }
+    free(keyTmp2.ptr);
+    free(keyTmp.ptr);
+    delete tmpDB;
+    return KeyCounter;
+}
+
 DatabaseDatum CDatabase::getNextKey(int indexID, DatabaseDatum key)
 {
     int cellid = 0, status = 0;
     DatabaseDatum data;
     data.size = 0;
     data.ptr = NULL;
-    KEYNEXT( & key, indexID, cellid, status);
+    KEYNEXT(key, indexID, cellid, status);
     if (!status)
     {
         (void) CELLREAD(cellid, & data);
@@ -317,7 +442,14 @@ void CDatabase::CREATEDB(char * dateiname, int indexanzahl, int index1size)
     sprintf(tempname, "%sd", dateiname);
     if (!stat(tempname, statbuffer))
     {
-        dbDatapointer = new wxFile(tempname, wxFile::read_write);
+        if (!rwmode)
+        {
+            dbDatapointer = new wxFile(tempname, wxFile::read);
+        }
+        else
+        {
+            dbDatapointer = new wxFile(tempname, wxFile::read_write);
+        }
     }
     else
     {
@@ -328,7 +460,14 @@ void CDatabase::CREATEDB(char * dateiname, int indexanzahl, int index1size)
     sprintf(tempname, "%si", dateiname);
     if (!stat(tempname, statbuffer))
     {
-        dbIndexpointer = new wxFile(tempname, wxFile::read_write);
+        if (!rwmode)
+        {
+            dbIndexpointer = new wxFile(tempname, wxFile::read);
+        }
+        else
+        {
+            dbIndexpointer = new wxFile(tempname, wxFile::read_write);
+        }
     }
     else
     {
@@ -502,8 +641,8 @@ void CDatabase::ADDINDEX(int indexnummer, int keylaenge)
             indexheader.FirstIndexBlock = GETEFB();
             indexheader.Keylength = keylaenge;
             indexheader.BlockType = 2;
-            indexheader.EntryLength = sizeof(DBkey) - 120 + (((3 + keylaenge) >> 2) << 2);
-            indexheader.KeyCount = 0;
+            indexheader.EntryLength = sizeof(DBkey) - 128 + (((3 + keylaenge) >> 2) << 2);
+            indexheader.KeyCounterAll = 0;
             memset(tempblock, 0, dbBlocksize);
             memcpy(tempblock, & indexheader, sizeof(DBindexheader));
             BLKWRITE(dbheader.IndexFirstBlock[indexnummer], tempblock);
@@ -512,11 +651,7 @@ void CDatabase::ADDINDEX(int indexnummer, int keylaenge)
             indexblockheader.IndexLevel = 1;
             indexblockheader.EntryLength = indexheader.EntryLength;
             indexblockheader.KeyCount = 1;
-            DBkey tempKey;
-            tempKey.T = 1;
-            tempKey.P = 0x7fffffff;
-            memset(tempKey.K, 255, indexheader.Keylength);
-            memcpy(keys0[1], & tempKey, indexheader.EntryLength);
+            memcpy(keys0[1], & keys0Last, indexheader.EntryLength);
             KEYBLKWRITE(indexheader.FirstIndexBlock, & indexblockheader, keys0);
             memcpy(tempblock, & dbheader, sizeof(DBheader));
             BLKWRITE(1, tempblock);
@@ -603,7 +738,7 @@ void CDatabase::ADDINDEX(int indexnummer, int keylaenge)
  }
     */
 
-void CDatabase::KEYNEXT(DatabaseDatum * key, int indexnummer, int & snr, int & e)
+void CDatabase::KEYNEXT(DatabaseDatum & key, int indexnummer, int & snr, int & e)
 {
     if ((dbIndexsize > dbBlocksize) && (indexnummer > 0) && (indexnummer < 65))
     {
@@ -611,7 +746,11 @@ void CDatabase::KEYNEXT(DatabaseDatum * key, int indexnummer, int & snr, int & e
         memcpy( & indexheader, tempblock, sizeof(DBindexheader));
         if (dbheader.IndexFirstBlock[indexnummer])
         {
-            SEARCH3(indexnummer, key, snr, e);
+            if (key .size > indexheader.Keylength)
+            {
+                key .size = indexheader.Keylength;
+            }
+            SEARCH3(indexnummer, & key, snr, e);
         }
     }
 }
@@ -629,20 +768,28 @@ void CDatabase::KEYPREV(DatabaseDatum * key, int indexnummer, int & snr, int & e
     }
 }
 
-void CDatabase::KEYDELETE(DatabaseDatum * key, int indexnummer, int & snr, int & e)
+void CDatabase::KEYDELETE(DatabaseDatum & key, int indexnummer, int & snr, int & e)
 {
     if ((dbIndexsize > dbBlocksize) && (indexnummer > 0) && (indexnummer < 65))
     {
-        BLKREAD(dbheader.IndexFirstBlock[indexnummer], tempblock);
-        memcpy( & indexheader, tempblock, sizeof(DBindexheader));
-        e = CREATEtempkey(key);
-        if (!e)
+        if (dbheader.IndexFirstBlock[indexnummer])
         {
-            if (dbheader.IndexFirstBlock[indexnummer])
-            {
-                SEARCH5(indexnummer, & tempkey, snr, e);
-            }
+            e = 0;
+            BLKREAD(dbheader.IndexFirstBlock[indexnummer], tempblock);
+            memcpy( & indexheader, tempblock, sizeof(DBindexheader));
+            memset(tempkey.ptr, 0, 128);
+            memcpy(tempkey.ptr, key.ptr, key.size);
+            SEARCH5(indexnummer, tempkey, snr, e);
+            memcpy(key.ptr, tempkey.ptr, key.size);
         }
+        else
+        {
+            e = 2;
+        }
+    }
+    else
+    {
+        e = 1;
     }
 }
 
@@ -729,7 +876,6 @@ void CDatabase::SEARCH2(int indexnummer, DatabaseDatum * tempkey, int & snr, int
                 }
                 else if(v < 0)
                 {
-                    indexblockheader.KeyCount = - indexblockheader.KeyCount;
                     i |= 0x4000;
                 }
             }
@@ -783,7 +929,7 @@ void CDatabase::SEARCH2(int indexnummer, DatabaseDatum * tempkey, int & snr, int
     }
 }
 
-void CDatabase::SEARCH3(int indexnummer, DatabaseDatum * tempkey, int & snr, int & e)
+void CDatabase::SEARCH3(int indexnummer, DatabaseDatum * key, int & snr, int & e)
 {
     int keys0T, keys0P;
     char keys0K[128];
@@ -801,14 +947,25 @@ void CDatabase::SEARCH3(int indexnummer, DatabaseDatum * tempkey, int & snr, int
     {
         e = 0;
         snr = 0;
-        indexlevel = 1;
         bnr1 = indexheader.FirstIndexBlock;
-	keys0Tleft = 0;
+        keys0Tleft = 0;
         keys0Pleft = 0;
+        memset(keys0[0], 0, 128);
+        //printf("key:%s -> ", key -> ptr);
+        indexlevel = 1;
+        keynumber[0] = 0;
         do
         {
+            keynumber[indexlevel] = 0;
             blocknumber[indexlevel] = bnr1;
             KEYBLKREAD(bnr1, & indexblockheader, keys0);
+            if (!bl0)
+            {
+                bl0 = bnr1;
+                kc0 = indexblockheader.KeyCount;
+            }
+            BlockCounter++;
+            BlockKeyCounter += indexblockheader.KeyCount;
             keys0P = 0;
             keys0T = 0;
             memset(keys0K, 0, 128);
@@ -818,7 +975,7 @@ void CDatabase::SEARCH3(int indexnummer, DatabaseDatum * tempkey, int & snr, int
                 while (i < indexblockheader.KeyCount)
                 {
                     ++i;
-                    v = memcmp(tempkey -> ptr, keys0[i] -> K, indexheader.Keylength);
+                    v = memcmp(key -> ptr, keys0[i] -> K, indexheader.Keylength);
                     if (v < 0)
                     {
                         keys0T = keys0[i] -> T;
@@ -834,7 +991,7 @@ void CDatabase::SEARCH3(int indexnummer, DatabaseDatum * tempkey, int & snr, int
                 while (i < indexblockheader.KeyCount)
                 {
                     ++i;
-                    v = memcmp(tempkey -> ptr, keys0[i] -> K, indexheader.Keylength);
+                    v = memcmp(key -> ptr, keys0[i] -> K, indexheader.Keylength);
                     if (v <= 0)
                     {
                         if (keys0[i] -> T == 2)
@@ -886,7 +1043,7 @@ void CDatabase::SEARCH3(int indexnummer, DatabaseDatum * tempkey, int & snr, int
                     {
                         e = 0;
                         snr = keys0P;
-                        memcpy(tempkey -> ptr, keys0K, indexheader.Keylength);
+                        memcpy(key -> ptr, keys0K, indexheader.Keylength);
                     }
                     z = 3;
                     break;
@@ -913,7 +1070,7 @@ void CDatabase::SETKEY(DBkey * key, short entrytype, int blocknumber, DatabaseDa
     }
 }
 
-void CDatabase::SEARCH4(int indexnummer, DatabaseDatum * tempkey, int & snr, int & e)
+void CDatabase::SEARCH4(int indexnummer, DatabaseDatum * key, int & snr, int & e)
 {
     int z = 0, i = 0, v = 0;
     int bnr1 = 0, bnr2 = 0;
@@ -938,7 +1095,7 @@ void CDatabase::SEARCH4(int indexnummer, DatabaseDatum * tempkey, int & snr, int
         while (i < indexblockheader.KeyCount)
         {
             ++i;
-            v = memcmp(tempkey -> ptr, keys0[i] -> K, indexheader.Keylength);
+            v = memcmp(key -> ptr, keys0[i] -> K, indexheader.Keylength);
             if (!v)
             {
                 bnr2 = keys0[i] -> P;
@@ -973,11 +1130,11 @@ void CDatabase::SEARCH4(int indexnummer, DatabaseDatum * tempkey, int & snr, int
                         }
                         keys0[i] = keys0temp;
                         indexblockheader.KeyCount++;
-                        indexheader.KeyCount++;
-                        SETKEY(keys0[i], 1, snr, tempkey);
+                        indexheader.KeyCounterAll++;
+                        SETKEY(keys0[i], 1, snr, key);
                         //**********gelesenen Block bnr1 zurückschreiben nach einfügen des Keys:
                         KEYBLKWRITE(bnr1, & indexblockheader, keys0);
-                        z = 4;
+                        z = 41;
                     }
                     else
                     {
@@ -1010,34 +1167,38 @@ void CDatabase::SEARCH4(int indexnummer, DatabaseDatum * tempkey, int & snr, int
                 if ((usedbytes + indexheader.EntryLength) <= dbBlocksize)
                 {
                     indexblockheader.KeyCount++;
-                    indexheader.KeyCount++;
-                    SETKEY(keys0[(int)indexblockheader.KeyCount], 1, GETEFB(), tempkey);
+                    indexheader.KeyCounterAll++;
+                    SETKEY(keys0[indexblockheader.KeyCount], 1, snr, key);
                     KEYBLKWRITE(bnr1, & indexblockheader, keys0);
-                    z = 4;
+                    z = 42;
                 }
                 else
                 {
+                    i = indexblockheader.KeyCount;
                     switch (keys0[i] -> T)
                     {
                     case 1:
                         //*****KeyData-Entry zum KeyBlock-Entry wandeln, dabei key durch neuen key ersetzen:
-                        memcpy(keys0[0], keys0[(int)indexblockheader.KeyCount], indexheader.EntryLength);
-                        SETKEY(keys0[(int)indexblockheader.KeyCount], 2, GETEFB(), tempkey);
+                        memcpy(keys0[0], keys0[i], indexheader.EntryLength);
+                        SETKEY(keys0[i], 2, GETEFB(), key);
                         KEYBLKWRITE(bnr1, & indexblockheader, keys0);
                         indexlevel++;
-                        bnr1 = keys0[(int)indexblockheader.KeyCount] -> P;
+                        bnr1 = keys0[i] -> P;
                         indexblockheader.BlockType = 3;
                         indexblockheader.IndexID = indexnummer;
                         indexblockheader.IndexLevel = indexlevel;
                         indexblockheader.EntryLength = indexheader.EntryLength;
                         indexblockheader.KeyCount = 1;
+                        indexheader.KeyCounterAll++;
                         memcpy(keys0[1], keys0[0], indexheader.EntryLength);
                         KEYBLKWRITE(bnr1, & indexblockheader, keys0);
+                        z = 43;
                         break;
                     case 2:
-                        SETKEY(keys0[(int)indexblockheader.KeyCount], 2, bnr1, tempkey);
+                        bnr2 = keys0[i] -> P;
+                        SETKEY(keys0[i], 2, bnr2, key);
                         KEYBLKWRITE(bnr1, & indexblockheader, keys0);
-                        bnr1 = keys0[(int)indexblockheader.KeyCount] -> P;
+                        bnr1 = bnr2;
                         indexlevel++;
                         break;
                     default:
@@ -1048,17 +1209,8 @@ void CDatabase::SEARCH4(int indexnummer, DatabaseDatum * tempkey, int & snr, int
         }
         else
         {
-            switch (keys0[i] -> T)
-            {
-            case 1:
-                e = 1;
-                z = 4;
-                break;
-            case 2:
-                bnr1 = bnr2;
-                indexlevel++;
-                break;
-            }
+            e = 1;
+            z = 4;
         }
     }
     while (!z);
@@ -1070,7 +1222,7 @@ void CDatabase::SEARCH4(int indexnummer, DatabaseDatum * tempkey, int & snr, int
     }
 }
 
-void CDatabase::SEARCH5(int indexnummer, DatabaseDatum * tempkey, int & snr, int & e)
+void CDatabase::SEARCH5(int indexnummer, DatabaseDatum & key, int & snr, int & e)
 {
     int z = 0, i = 0, v = 0;
     int bnr1 = 0, bnr2 = 0;
@@ -1091,7 +1243,7 @@ void CDatabase::SEARCH5(int indexnummer, DatabaseDatum * tempkey, int & snr, int
             while (i < indexblockheader.KeyCount)
             {
                 ++i;
-                v = memcmp(tempkey -> ptr, keys0[i] -> K, indexheader.Keylength);
+                v = memcmp(key .ptr, keys0[i] -> K, indexheader.Keylength);
                 if (!v)
                 {
                     bnr2 = keys0[i] -> P;
@@ -1100,7 +1252,6 @@ void CDatabase::SEARCH5(int indexnummer, DatabaseDatum * tempkey, int & snr, int
                 }
                 else if(v < 0)
                 {
-                    indexblockheader.KeyCount = - indexblockheader.KeyCount;
                     i |= 0x4000;
                 }
             }
@@ -1138,6 +1289,8 @@ void CDatabase::SEARCH5(int indexnummer, DatabaseDatum * tempkey, int & snr, int
                     do
                     {
                         i = keynumber[indexlevel];
+                        bnr1 = blocknumber[indexlevel];
+                        KEYBLKREAD(bnr1, & indexblockheader, keys0);
                         if (keys0[0] -> T)
                         {
                             memcpy(keys0[i] -> K, keys0[0] -> K, indexheader.Keylength);
@@ -1145,11 +1298,7 @@ void CDatabase::SEARCH5(int indexnummer, DatabaseDatum * tempkey, int & snr, int
                             keys0[0] -> T = 2;
                             KEYBLKWRITE(blocknumber[indexlevel], & indexblockheader, keys0);
                             indexlevel--;
-                            if (keynumber[indexlevel])
-                            {
-                                KEYBLKREAD(blocknumber[indexlevel], & indexblockheader, keys0);
-                            }
-                            else
+                            if (!keynumber[indexlevel])
                             {
                                 indexlevel = - indexlevel;
                             }
@@ -1159,37 +1308,25 @@ void CDatabase::SEARCH5(int indexnummer, DatabaseDatum * tempkey, int & snr, int
                             if (indexblockheader.KeyCount > 1)
                             {
                                 indexblockheader.KeyCount--;
-                                memcpy(keys0[0] -> K, keys0[(int)indexblockheader.KeyCount] -> K, indexheader.Keylength);
+                                memcpy(keys0[0] -> K, keys0[indexblockheader.KeyCount] -> K, indexheader.Keylength);
                                 keys0[0] -> P = blocknumber[indexlevel];
                                 keys0[0] -> T = 2;
                                 KEYBLKWRITE(blocknumber[indexlevel], & indexblockheader, keys0);
                                 indexlevel--;
-                                if (keynumber[indexlevel])
-                                {
-                                    KEYBLKREAD(blocknumber[indexlevel], & indexblockheader, keys0);
-                                }
-                                else
+                                if (!keynumber[indexlevel])
                                 {
                                     indexlevel = - indexlevel;
                                 }
                             }
                             else if(indexlevel > 1)
                             {
-                                PUTEFB(blocknumber[indexlevel]);
+                                PUTEFB(bnr1);
                                 indexlevel--;
-                                if (keynumber[indexlevel])
-                                {
-                                    KEYBLKREAD(blocknumber[indexlevel], & indexblockheader, keys0);
-                                }
-                                else
-                                {
-                                    indexlevel = - indexlevel;
-                                }
                             }
                             else
                             {
                                 indexblockheader.KeyCount--;
-                                KEYBLKWRITE(blocknumber[indexlevel], & indexblockheader, keys0);
+                                KEYBLKWRITE(bnr1, & indexblockheader, keys0);
                                 indexlevel = - indexlevel;
                             }
                         }
@@ -1202,14 +1339,43 @@ void CDatabase::SEARCH5(int indexnummer, DatabaseDatum * tempkey, int & snr, int
                                 keys0[i] = keys0[i + 1];
                                 i++;
                             }
-                            keys0[indexheader.KeyCount] = keys0temp;
+                            keys0[indexblockheader.KeyCount] = keys0temp;
                             indexblockheader.KeyCount--;
-                            KEYBLKWRITE(blocknumber[indexlevel], & indexblockheader, keys0);
+                            KEYBLKWRITE(bnr1, & indexblockheader, keys0);
+                            if (indexblockheader.KeyCount == 1)
+                            {
+                                if (keys0[1] -> T == 1)
+                                {
+                                    if (!memcmp(keys0[1] -> K, keys0Last.K, indexheader.Keylength))
+                                    {
+                                        int p = keys0[1] -> P;
+                                        while (indexlevel > 0)
+                                        {
+                                            KEYBLKREAD(bnr1, & indexblockheader, keys0);
+                                            i = indexblockheader.KeyCount;
+                                            if ((i == 1) && (indexlevel > 1))
+                                            {
+                                                PUTEFB(bnr1);
+                                                indexlevel--;
+                                                bnr1 = blocknumber[indexlevel];
+                                            }
+                                            else
+                                            {
+                                                keys0[i] -> T = 1;
+                                                keys0[i] -> P = p;
+                                                KEYBLKWRITE(bnr1, & indexblockheader, keys0);
+                                                indexlevel = 0;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                             indexlevel = - indexlevel;
                         }
                     }
                     while (indexlevel > 0);
                     z = 5;
+                    indexheader.KeyCounterAll--;
                     break;
                 case 2:
                     indexlevel++;
@@ -1219,6 +1385,12 @@ void CDatabase::SEARCH5(int indexnummer, DatabaseDatum * tempkey, int & snr, int
             }
         }
         while (!z);
+    }
+    if (!e)
+    {
+        memset(tempblock, 0, dbBlocksize);
+        memcpy(tempblock, & indexheader, sizeof(DBindexheader));
+        BLKWRITE(dbheader.IndexFirstBlock[indexnummer], tempblock);
     }
 }
 
@@ -1341,5 +1513,84 @@ void CDatabase::DECODE(unsigned char * buffer, int size, long keylong)
         }
         buffer[i] = byte;
     }
+}
+
+void CDatabase::ShowFileFromDB(wxFrame * parent, const char * key)
+{
+    DatabaseDatum tempKey;
+    DatabaseDatum tempData;
+    tempKey.ptr = (unsigned char *) malloc(17);
+    memset(tempKey.ptr, 0, 17);
+    tempKey.size = strlen(key);
+    memcpy(tempKey.ptr, key, tempKey.size);
+    tempData = fetchKey(1, tempKey);
+    if (tempData.ptr)
+    {
+        if (!memcmp(tempKey.ptr + tempKey.size - 4, ".jpg", 4))
+        {
+            CpicFrame * tmp;
+            tmp = new CpicFrame(parent, (char *) tempData.ptr, tempData.size, - 1, 540,
+            (char *) tempKey.ptr);
+            tmp -> Show();
+        }
+        else if(!memcmp(tempKey.ptr + tempKey.size - 4, ".txt", 4))
+        {
+            printf("key(%d): %s\n", tempKey.size, tempKey.ptr);
+        }
+        free(tempData.ptr);
+        tempData.ptr = NULL;
+        tempData.size = 0;
+    }
+    free(tempKey.ptr);
+}
+
+void CDatabase::ImportFileIntoDB(wxFrame * parent, const char * fpath, const char * fname)
+{
+    DatabaseDatum tempKey;
+    DatabaseDatum tempData;
+    char datafile[256];
+    char datapath[256];
+    tempKey.ptr = (unsigned char *) malloc(17);
+    memset(tempKey.ptr, 0, 17);
+    sprintf(datapath, "%s", fpath);
+    sprintf(datafile, "%s", fname);
+    wxFileDialog * fdDATA = new wxFileDialog(parent, "Bitte eine Datei auswaehlen zum Importieren:",
+    datapath, datafile, "*.*");
+    if (fdDATA -> ShowModal() == wxID_OK)
+    {
+        strcpy(datapath, fdDATA -> GetDirectory() .GetData());
+        strcpy(datafile, fdDATA -> GetFilename() .GetData());
+        tempKey.size = strlen(datafile);
+        if (tempKey.size > 16)
+        {
+            memcpy(tempKey.ptr, datafile + tempKey.size - 16, 17);
+            tempKey.size = 16;
+        }
+        else
+        {
+            memcpy(tempKey.ptr, datafile, tempKey.size + 1);
+        }
+        storeFile(1, tempKey, fdDATA -> GetPath() .GetData(), false);
+        tempData = fetchKey(1, tempKey);
+        if (tempData.ptr)
+        {
+            if (!memcmp(tempKey.ptr + tempKey.size - 4, ".jpg", 4))
+            {
+                CpicFrame * tmp;
+                tmp = new CpicFrame(parent, (char *) tempData.ptr, tempData.size, - 1, 540,
+                (char *) tempKey.ptr);
+                tmp -> Show();
+            }
+            else if(!memcmp(tempKey.ptr + tempKey.size - 4, ".txt", 4))
+            {
+                printf("key(%d): %s\n", tempKey.size, tempKey.ptr);
+            }
+            free(tempData.ptr);
+            tempData.ptr = NULL;
+            tempData.size = 0;
+        }
+    }
+    free(tempKey.ptr);
+    delete fdDATA;
 }
 

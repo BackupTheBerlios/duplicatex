@@ -1,23 +1,23 @@
-/*
-**** Duplicatex v1.0
-**** Find and markup duplicate files and/or delete it.
-****
-**** Copyright (C) 2005 Frank Schaefer (sf@mulinux.org)
-****
-**** This program is free software; you can redistribute it and/or
-**** modify it under the terms of the GNU General Public License
-**** as published by the Free Software Foundation; either version 2
-**** of the License, or (at your option) any later version.
-**** 
-**** This program is distributed in the hope that it will be useful,
-**** but WITHOUT ANY WARRANTY; without even the implied warranty of
-**** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-**** GNU General Public License for more details.
-****
-**** You should have received a copy of the GNU General Public License
-**** along with this program; if not, write to the Free Software
-**** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ /*
+ **** Duplicatex v1.0
+ **** Find and markup duplicate files and/or delete it.
+ ****
+ **** Copyright (C) 2005 Frank Schaefer (sf@mulinux.org)
+ ****
+ **** This program is free software; you can redistribute it and/or
+ **** modify it under the terms of the GNU General Public License
+ **** as published by the Free Software Foundation; either version 2
+ **** of the License, or (at your option) any later version.
+ ****
+ **** This program is distributed in the hope that it will be useful,
+ **** but WITHOUT ANY WARRANTY; without even the implied warranty of
+ **** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ **** GNU General Public License for more details.
+ ****
+ **** You should have received a copy of the GNU General Public License
+ **** along with this program; if not, write to the Free Software
+ **** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+    */
 
 #include "picframe.h"
 #include "database.h"
@@ -43,7 +43,7 @@ CpicFrame::CpicFrame(wxFrame * parent, const char * buffer, int buffersize, int 
     {
         imageXfsize = imageXsize;
     }
-    else if(imageXfsize > imageXsize)
+    else if(imageXfsize > (imageXsize))
     {
         imageXfsize = imageXsize;
     }
@@ -51,27 +51,48 @@ CpicFrame::CpicFrame(wxFrame * parent, const char * buffer, int buffersize, int 
     {
         imageYfsize = imageYsize;
     }
-    else if(imageYfsize > imageYsize)
+    else if(imageYfsize > (imageYsize))
     {
         imageYfsize = imageYsize;
     }
-    if (bitmap_jpg)
-    {
-        delete bitmap_jpg;
-    }
+    sizer_root = new wxBoxSizer(wxVERTICAL);
+    Xf = 0;
+    Yf = 0;
+    sb1x = NULL;
+    sb1y = NULL;
     bitmap_jpg = new wxBitmap(image_jpg -> Scale(imageXsize, imageYsize));
     if (bitmap_jpg)
     {
-        SetClientSize(imageXfsize, imageYfsize);
-        sb1x = new wxScrollBar(this, - 1, wxDefaultPosition, wxSize( - 1, 16), wxSB_HORIZONTAL);
-        sb1y = new wxScrollBar(this, - 1, wxDefaultPosition, wxSize(16, - 1), wxSB_VERTICAL);
-        sb1x -> SetScrollbar(0, imageXfsize - 16, imageXsize, imageXfsize - 16);
-        sb1y -> SetScrollbar(0, imageYfsize - 16, imageYsize, imageYfsize - 16);
+        if (imageXfsize != imageXsize)
+        {
+            Yf = 16;
+        }
+        if (imageYfsize != imageYsize)
+        {
+            Xf = 16;
+        }
+        if (imageXfsize != imageXsize)
+        {
+            sb1x = new wxScrollBar(this, - 1, wxDefaultPosition, wxSize( - 1, Yf), wxSB_HORIZONTAL);
+            sb1x -> SetScrollbar(0, imageXfsize + Xf, imageXsize, imageXfsize + Xf);
+        }
+        if (imageYfsize != imageYsize)
+        {
+            sb1y = new wxScrollBar(this, - 1, wxDefaultPosition, wxSize(Xf, - 1), wxSB_VERTICAL);
+            sb1y -> SetScrollbar(0, imageYfsize + Yf, imageYsize, imageYfsize + Yf);
+        }
+        //printf("Xf,Yf=%d,%d %d,%d != %d,%d\n", Xf, Yf, imageXsize, imageYsize, imageXfsize, imageYfsize);
     }
-    sizer_root = new wxBoxSizer(wxVERTICAL);
-    SetSizeHints(imageXfsize, imageYfsize, imageXsize + 16, imageYsize + 16);
-    sizer_root -> Add(sb1y, 1, wxALIGN_RIGHT, 0);
-    sizer_root -> Add(sb1x, 0, wxGROW | wxALIGN_BOTTOM, 0);
+    SetClientSize(imageXfsize + Xf, imageYfsize + Yf);
+    SetSizeHints(imageXfsize + Xf, imageYfsize + Yf, imageXsize + Xf, imageYsize + Yf);
+    if (sb1x)
+    {
+        sizer_root -> Add(sb1x, 0, wxGROW | wxALIGN_BOTTOM, 0);
+    }
+    if (sb1y)
+    {
+        sizer_root -> Add(sb1y, 1, wxALIGN_RIGHT, 0);
+    }
     SetSizer(sizer_root);
     if (strlen(title))
     {
@@ -83,7 +104,7 @@ CpicFrame::CpicFrame(wxFrame * parent, const char * buffer, int buffersize, int 
     Connect( - 1, wxEVT_SCROLL_LINEDOWN, WXOEF(wxScrollEventFunction) & CpicFrame::OnPaint);
     Connect( - 1, wxEVT_SCROLL_PAGEUP, WXOEF(wxScrollEventFunction) & CpicFrame::OnPaint);
     Connect( - 1, wxEVT_SCROLL_PAGEDOWN, WXOEF(wxScrollEventFunction) & CpicFrame::OnPaint);
-    Connect( - 1, wxEVT_MOTION, WXOEF(wxMouseEventFunction) & CpicFrame::OnMouseMotion);
+    //Connect( - 1, wxEVT_MOTION, WXOEF(wxMouseEventFunction) & CpicFrame::OnMouseMotion);
     delete mis;
 }
 
@@ -125,9 +146,15 @@ void CpicFrame::OnMouseMotion(wxMouseEvent & event)
         }
         else
         {
-            int x3, y3, x2, y2, dx, dy;
-            x2 = sb1x -> GetThumbPosition();
-            y2 = sb1y -> GetThumbPosition();
+            int x3, y3, x2 = 0, y2 = 0, dx, dy;
+            if (sb1x)
+            {
+                x2 = sb1x -> GetThumbPosition();
+            }
+            if (sb1y)
+            {
+                y2 = sb1y -> GetThumbPosition();
+            }
             dx = (x - mouseXpos);
             dy = (y - mouseYpos);
             x3 = x2 + dx;
@@ -150,8 +177,14 @@ void CpicFrame::OnMouseMotion(wxMouseEvent & event)
             }
             if ((x3 != x2) || (y3 != y2))
             {
-                sb1x -> SetScrollbar(x3, imageXfsize - 16, imageXsize, imageXfsize - 16);
-                sb1y -> SetScrollbar(y3, imageYfsize - 16, imageYsize, imageYfsize - 16);
+                if (sb1x)
+                {
+                    sb1x -> SetScrollbar(x3, imageXfsize - 16, imageXsize, imageXfsize - 16);
+                }
+                if (sb1x)
+                {
+                    sb1y -> SetScrollbar(y3, imageYfsize - 16, imageYsize, imageYfsize - 16);
+                }
                 wxPaintDC pdc(this);
                 PrepareDC(pdc);
                 DrawImage( & pdc);
@@ -194,15 +227,23 @@ void CpicFrame::DrawImage(wxPaintDC * pdc)
     {
         imageXfsize = x;
         imageYfsize = y;
-        x = sb1x -> GetThumbPosition();
-        y = sb1y -> GetThumbPosition();
-        if ((x + imageXfsize - 16) > imageXsize)
+        x = 0;
+        y = 0;
+        if (sb1x)
         {
-            x = imageXsize - imageXfsize + 16;
+            x = sb1x -> GetThumbPosition();
         }
-        if ((y + imageYfsize - 16) > imageYsize)
+        if (sb1y)
         {
-            y = imageYsize - imageYfsize + 16;
+            y = sb1y -> GetThumbPosition();
+        }
+        if ((x + imageXfsize - Xf) > imageXsize)
+        {
+            x = imageXsize - imageXfsize + Xf;
+        }
+        if ((y + imageYfsize - Yf) > imageYsize)
+        {
+            y = imageYsize - imageYfsize + Yf;
         }
         if (x < 0)
         {
@@ -212,8 +253,14 @@ void CpicFrame::DrawImage(wxPaintDC * pdc)
         {
             y = 0;
         }
-        sb1x -> SetScrollbar(x, imageXfsize - 16, imageXsize, imageXfsize - 16);
-        sb1y -> SetScrollbar(y, imageYfsize - 16, imageYsize, imageYfsize - 16);
+        if (sb1x)
+        {
+            sb1x -> SetScrollbar(x, imageXfsize - Xf, imageXsize, imageXfsize - Xf);
+        }
+        if (sb1y)
+        {
+            sb1y -> SetScrollbar(y, imageYfsize - Yf, imageYsize, imageYfsize - Yf);
+        }
     }
     if (image_jpg)
     {
@@ -225,18 +272,32 @@ void CpicFrame::DrawImage(wxPaintDC * pdc)
         bitmap_jpg = new wxBitmap(image_jpg -> Scale(imageXsize, imageYsize));
         if (bitmap_jpg)
         {
-            w = imageXfsize - 16;
+            w = imageXfsize - Xf;
             if (w > imageXsize)
             {
                 w = imageXsize;
             }
-            h = imageYfsize - 16;
+            h = imageYfsize - Yf;
             if (h > imageYsize)
             {
                 h = imageYsize;
             }
-            px = sb1x -> GetThumbPosition();
-            py = sb1y -> GetThumbPosition();
+            if (sb1x)
+            {
+                px = sb1x -> GetThumbPosition();
+            }
+            else
+            {
+                px = 0;
+            }
+            if (sb1y)
+            {
+                py = sb1y -> GetThumbPosition();
+            }
+            else
+            {
+                py = 0;
+            }
             mdc.SelectObject( * bitmap_jpg);
             pdc -> Blit(0, 0, w, h, & mdc, px, py);
         }

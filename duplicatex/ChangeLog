@@ -5,6 +5,12 @@ Version 1.0.0
 2005-06-10
 *Initial release of duplicatic v1.0 (full version)
 
-Version 1.0.1
--------------
+2005-06-15
+----------
 *Bugfix minerdlg.cpp: adding initial value for (sprache)
+
+2005-07-06
+----------
+*Update database-functionality (database.h+database.cpp) (adding index-reorg)
+-Database-Pictureintegration added
+*some bugs fixed (deleting keys)
