@@ -103,6 +103,7 @@ class CminerDlg:public wxPanel
     void ClearDatabase();
     void CreateInfofile(const char * infofilename, const char * filepath, const char * filename);
     void CreateInfofileMET(char * infofilename, char * filepath, char * filename);
+    void CreatePartfileMET(char * partfilename, char * filepath, char * filename);
     void CreateMetfile(const char * infofilename, const char * filepath, const char * filename);
     int GetFiletype(char * filename);
     void Process_Metfile(char * filepath, char * filename);

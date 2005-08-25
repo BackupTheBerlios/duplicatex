@@ -2627,7 +2627,8 @@ void CminerDlg::Process_Metfile(char * filepath, char * filename)
         char tempname[strlen(sourcename) + 32 + strlen(mfile -> mf_filename) ];
         if (CheckDatabase(keybuffer, databuffer, true))
         {
-            if (0)//strcmp(databuffer, (char *) dbSMmResult.ptr))
+            //strcmp(databuffer, (char *) dbSMmResult.ptr)):
+            if (0)
             {
                 wxMutexGuiEnter();
                 sprintf(buffer, "\nDuplikate %lu: ", count_filesprocessed);
@@ -2660,6 +2661,12 @@ void CminerDlg::Process_Metfile(char * filepath, char * filename)
         if (p_creInfForMet)
         {
             CreateInfofileMET(tempname, filepath, filename);
+        }
+        strcpy(tempname, sourcename);
+        tempname[strlen(tempname) - 4] = 0;
+        if (p_crePartForMet)
+        {
+            CreatePartfileMET(tempname, filepath, filename);
         }
         if (p_sepMetFtypes)
         {
@@ -3235,6 +3242,15 @@ void CminerDlg::CreateMetfile(const char * metfilefullname, const char * filepat
         metfile -> SetHashtable(hash -> hashtableindex, hash -> hashtable);
         metfile -> WriteTo();
         delete metfile;
+    }
+}
+
+void CminerDlg::CreatePartfileMET(char * partfilename, char * filepath, char * filename)
+{
+    FILE * tf = fopen(partfilename, "a");
+    if (tf)
+    {
+        fclose(tf);
     }
 }
 
