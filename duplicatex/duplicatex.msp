@@ -88,6 +88,7 @@ extraResourceOptions=
 6=picfidlg.cpp
 7=wxthread.cpp
 8=minerdlg.cpp
+9=picframe.cpp
 [Header]
 1=duplicatex.h
 2=metfile.h
@@ -98,7 +99,8 @@ extraResourceOptions=
 7=picfidlg.h
 8=wxthread.h
 9=minerdlg.h
+10=picframe.h
 [Resource]
 [Other]
 [History]
-minerdlg.cpp,44477
+minerdlg.cpp,44425

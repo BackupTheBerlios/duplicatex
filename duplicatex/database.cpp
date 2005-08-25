@@ -1168,7 +1168,7 @@ void CDatabase::SEARCH4(int indexnummer, DatabaseDatum * key, int & snr, int & e
                 {
                     indexblockheader.KeyCount++;
                     indexheader.KeyCounterAll++;
-                    SETKEY(keys0[indexblockheader.KeyCount], 1, snr, key);
+                    SETKEY(keys0[(int)indexblockheader.KeyCount], 1, snr, key);
                     KEYBLKWRITE(bnr1, & indexblockheader, keys0);
                     z = 42;
                 }
@@ -1308,7 +1308,7 @@ void CDatabase::SEARCH5(int indexnummer, DatabaseDatum & key, int & snr, int & e
                             if (indexblockheader.KeyCount > 1)
                             {
                                 indexblockheader.KeyCount--;
-                                memcpy(keys0[0] -> K, keys0[indexblockheader.KeyCount] -> K, indexheader.Keylength);
+                                memcpy(keys0[0] -> K, keys0[(int)indexblockheader.KeyCount] -> K, indexheader.Keylength);
                                 keys0[0] -> P = blocknumber[indexlevel];
                                 keys0[0] -> T = 2;
                                 KEYBLKWRITE(blocknumber[indexlevel], & indexblockheader, keys0);
@@ -1339,7 +1339,7 @@ void CDatabase::SEARCH5(int indexnummer, DatabaseDatum & key, int & snr, int & e
                                 keys0[i] = keys0[i + 1];
                                 i++;
                             }
-                            keys0[indexblockheader.KeyCount] = keys0temp;
+                            keys0[(int)indexblockheader.KeyCount] = keys0temp;
                             indexblockheader.KeyCount--;
                             KEYBLKWRITE(bnr1, & indexblockheader, keys0);
                             if (indexblockheader.KeyCount == 1)

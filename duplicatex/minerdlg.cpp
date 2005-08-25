@@ -480,6 +480,14 @@ void CminerDlg::ButtonCHSD(wxCommandEvent & event)
         if (fdSD -> ShowModal() == wxID_OK)
         {
             theApp -> sourcedirectory = fdSD -> GetPath();
+            char * sd = (char*)theApp -> sourcedirectory.c_str();
+            for (unsigned int i = 0 ; i < strlen(sd) ; i++)
+            {
+                if (sd[i] == '\\')
+                {
+                    sd[i] = '/';
+                }
+            }
             smSTP3V2H1 -> SetLabel(theApp -> sourcedirectory);
         }
         delete fdSD;
@@ -498,6 +506,14 @@ void CminerDlg::ButtonCHTD(wxCommandEvent & event)
         if (fdTD -> ShowModal() == wxID_OK)
         {
             theApp -> targetdirectory = fdTD -> GetPath();
+            char * td = (char*)theApp -> targetdirectory.c_str();
+            for (unsigned int i = 0 ; i < strlen(td) ; i++)
+            {
+                if (td[i] == '\\')
+                {
+                    td[i] = '/';
+                }
+            }
             strcpy(DATABASEp, theApp -> targetdirectory.c_str());
             smSTP3V2H2 -> SetLabel(theApp -> targetdirectory);
         }
@@ -1232,14 +1248,15 @@ void CminerDlg::ButtonRENAME(wxCommandEvent & event)
 
 void CminerDlg::CheckboxCPM(wxCommandEvent & event)
 {
-    p_crePartForMet = smPMmetfiles -> IsChecked(20203);
+    p_crePartForMet = !p_crePartForMet;
+    smPMmetfiles -> Check(20203, p_crePartForMet);
 }
 
 void CminerDlg::CheckboxDEB(wxCommandEvent & event)
 {
     if (!threadcount)
     {
-        p_debugonoff = checkbox_DEB -> IsChecked();
+        p_debugonoff = !p_debugonoff;
         if (p_debugonoff)
         {
             debug = 1;
@@ -1251,9 +1268,9 @@ void CminerDlg::CheckboxDEB(wxCommandEvent & event)
     }
     else
     {
-        checkbox_DEB -> SetValue(p_debugonoff);
         Message(101, "");
     }
+    checkbox_DEB -> SetValue(p_debugonoff);
 }
 
 void CminerDlg::CheckboxMD4(wxCommandEvent & event)
@@ -1333,7 +1350,7 @@ void CminerDlg::CheckboxIFM(wxCommandEvent & event)
 {
     if (!threadcount)
     {
-        p_creInfForMet = smPMmetfiles -> IsChecked(20201);
+        p_creInfForMet = !p_creInfForMet;
         if (p_creInfForMet)
         {
             p_sepMetFtypes = false;
@@ -1342,9 +1359,9 @@ void CminerDlg::CheckboxIFM(wxCommandEvent & event)
     }
     else
     {
-        smPMmetfiles -> Check(20201, p_creInfForMet);
         Message(101, "");
     }
+    smPMmetfiles -> Check(20201, p_creInfForMet);
 }
 
 void CminerDlg::CheckboxIFP(wxCommandEvent & event)
@@ -1490,8 +1507,8 @@ void CminerDlg::CheckboxMAD(wxCommandEvent & event)
             smPMfinddups -> Check(20002, p_removedupext);
             p_deleteduples = false;
             smPMfinddups -> Check(20003, p_deleteduples);
-            p_doMD4hashing = true;
 #ifndef WX1
+            p_doMD4hashing = true;
             checkbox_MD4 -> SetValue(p_doMD4hashing);
 #endif
         }
@@ -1548,12 +1565,13 @@ void CminerDlg::CheckboxLOG(wxCommandEvent & event)
     if (!threadcount)
     {
         p_logduples = !p_logduples;
+        smPMfinddups -> Check(20004, p_logduples);
     }
     else
     {
         Message(101, "");
+        smPMfinddups -> Check(20004, p_logduples);
     }
-    smPMfinddups -> Check(20004, p_logduples);
 }
 
 void CminerDlg::CheckboxCreateDBentry(wxCommandEvent & event)
@@ -1561,12 +1579,13 @@ void CminerDlg::CheckboxCreateDBentry(wxCommandEvent & event)
     if (!threadcount)
     {
         p_creDBentry = !p_creDBentry;
+        smPMdbhandling -> Check(20501, p_creDBentry);
     }
     else
     {
         Message(101, "");
+        smPMdbhandling -> Check(20501, p_creDBentry);
     }
-    smPMdbhandling -> Check(20501, p_creDBentry);
 }
 
 void CminerDlg::CheckboxSFT(wxCommandEvent & event)
@@ -1576,8 +1595,10 @@ void CminerDlg::CheckboxSFT(wxCommandEvent & event)
         p_sepMetFtypes = !p_sepMetFtypes;
         if (p_sepMetFtypes)
         {
+#ifndef WX1
             p_doMD4hashing = false;
             checkbox_MD4 -> SetValue(p_doMD4hashing);
+#endif
             p_creInfForMet = false;
             smPMmetfiles -> Check(20201, p_creInfForMet);
             p_metfilesonly = true;
@@ -1590,7 +1611,7 @@ void CminerDlg::CheckboxSFT(wxCommandEvent & event)
     {
         Message(101, "");
     }
-    smPMmetfiles -> Check(20202, p_doMD4hashing);
+    smPMmetfiles -> Check(20202, p_sepMetFtypes);
 }
 
 void CminerDlg::CheckboxSELPIC(wxCommandEvent & event)
