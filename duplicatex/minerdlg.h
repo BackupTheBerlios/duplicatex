@@ -87,6 +87,7 @@ class CminerDlg:public wxPanel
     void CheckboxWSF(wxCommandEvent & event);
     void CheckboxIFO(wxCommandEvent & event);
     void CheckboxCMO(wxCommandEvent & event);
+    void CheckboxCPM(wxCommandEvent & event);
     void CheckboxMD4(wxCommandEvent & event);
     void CheckboxMFL(wxCommandEvent & event);
     void CheckboxMFO(wxCommandEvent & event);
@@ -127,6 +128,7 @@ class CminerDlg:public wxPanel
     CpicFrame * picfr001;
     wxButton * button_FINDDUPS;
     wxButton * button_DBHANDLING;
+    wxButton * button_METFILES;
     wxButton * button_CHSD;
     wxButton * button_CHTD;
     wxButton * button_START;
@@ -150,6 +152,7 @@ class CminerDlg:public wxPanel
     bool p_partfilesonly;
     bool p_sepMetFtypes;
     bool p_creInfForMet;
+    bool p_crePartForMet;
     bool p_creInfForPart;
     bool p_creInfForAll;
     bool p_creMetForAll;

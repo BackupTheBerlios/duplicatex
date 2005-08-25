@@ -53,7 +53,7 @@ wxString Csprachen[] =
 CminerDlg::CminerDlg(wxWindow * parent)
 :wxPanel(parent, - 1, wxDefaultPosition, wxDefaultSize, 0, "")
 {
-    sprache=0;
+    sprache = 0;
     hostname = new char[9];
     strcpy(hostname, "hostname");
     localip = new char[16];
@@ -92,9 +92,10 @@ CminerDlg::CminerDlg(wxWindow * parent)
     p_creDBentry = true;
     p_metfilesonly = false;
     p_sepMetFtypes = false;
-    p_creInfForMet = true;
+    p_creInfForMet = false;
     p_creInfForPart = true;
     p_creInfForAll = false;
+    p_crePartForMet = true;
     p_creMetForAll = false;
     p_cNewED2Kparts = false;
     p_partfilesonly = false;
@@ -149,11 +150,13 @@ CminerDlg::CminerDlg(wxWindow * parent)
     smPMmd4hashs -> Check(20102, p_doMD4fakechk);
     smPMmd4hashs -> Check(20103, p_creInfForAll);
     smPMmd4hashs -> Check(20104, p_creMetForAll);
-    smPMmetfiles = new wxMenu("Metfile-Processing");
-    smPMmetfiles -> AppendCheckItem(20201, "create .ism for .met");
-    smPMmetfiles -> AppendCheckItem(20202, "separate filetypes");
+    smPMmetfiles = new wxMenu(_T("Metfile(ed2k)-Verarbeitung"));
+    smPMmetfiles -> AppendCheckItem(20201, "create ism-files");
+    smPMmetfiles -> AppendCheckItem(20202, "sep ftypes");
+    smPMmetfiles -> AppendCheckItem(20203, "create partfiles if needed");
     smPMmetfiles -> Check(20201, p_creInfForMet);
     smPMmetfiles -> Check(20202, p_sepMetFtypes);
+    smPMmetfiles -> Check(20203, p_crePartForMet);
     smPMpartfiles = new wxMenu("Partfile-Processing");
     smPMpartfiles -> AppendCheckItem(20211, "create .ism for .part");
     smPMpartfiles -> AppendCheckItem(20212, "create new-ed2k-parts");
@@ -183,11 +186,33 @@ CminerDlg::CminerDlg(wxWindow * parent)
     wxBoxSizer * sizer_v4h2 = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer * sizer_h9 = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer * sizer_DUP = new wxBoxSizer(wxHORIZONTAL);
-    smSTP3V2H1 = new wxStaticText(this, - 1, theApp -> sourcedirectory, wxDefaultPosition, wxSize(512, 24));
-    smSTP3V2H2 = new wxStaticText(this, - 1, theApp -> targetdirectory, wxDefaultPosition, wxSize(512, 24));
+    smSTP3V2H1 = new wxStaticText(this, - 1, theApp -> sourcedirectory, wxDefaultPosition, wxSize(256, 24));
+    smSTP3V2H2 = new wxStaticText(this, - 1, theApp -> targetdirectory, wxDefaultPosition, wxSize(256, 24));
+    wxBoxSizer * sizer_MFO = new wxBoxSizer(wxHORIZONTAL);
+    checkbox_MFO = new wxCheckBox(this, 11321, _T(""), wxPoint( - 1, - 1)
+    , wxDefaultSize, 0, wxDefaultValidator, "mfo");
+    checkbox_MFO -> SetValue(p_metfilesonly);
+    sizer_MFO -> Add(checkbox_MFO, 0, wxALIGN_CENTER_VERTICAL, 0);
+    button_METFILES = new wxButton(this, 12321, "", wxPoint( - 1, - 1), wxSize(128, 24));
+    button_DBHANDLING = new wxButton(this, 11355, ".", wxDefaultPosition, wxSize(200, - 1));
+    button_FINDDUPS = new wxButton(this, 12302, "&Duplikate suchen und markieren",
+    wxDefaultPosition, wxSize(200, - 1));
+    button_CHSD = new wxButton(this, 11353, ".", wxDefaultPosition, wxSize(200, - 1));
+    button_CHTD = new wxButton(this, 11354, ".", wxDefaultPosition, wxSize(200, - 1));
+    sizer_DUP -> Add(button_FINDDUPS, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 0);
+    sizer_MFO -> Add(button_METFILES, 0, wxLEFT, 2);
+    sizer_v1 -> Add(sizer_DUP, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
+    sizer_v1 -> Add(sizer_MFO, 0, wxALL, 2);
+    sizer_v4h1 -> Add(button_CHSD, 0, wxALIGN_CENTER_VERTICAL | wxALL, 0);
+    sizer_v4h1 -> Add(smSTP3V2H1, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    sizer_v2 -> Add(sizer_v4h1, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
+    sizer_v2 -> Add(button_DBHANDLING, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
+    sizer_v4h2 -> Add(button_CHTD, 0, wxALIGN_CENTER_VERTICAL | wxALL, 0);
+    sizer_v4h2 -> Add(smSTP3V2H2, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
+    sizer_v2 -> Add(sizer_v4h2, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
     sizer_h1 -> Add(sizer_v1, 0, 0, 0);
     sizer_h1 -> Add(sizer_v2, 0, 0, 0);
-    sizer_h1 -> Add(sizer_v3, 0, 0, 0);
+    sizer_h1 -> Add(sizer_v3, 1, wxGROW, 0);
     sizer_h1 -> Add(sizer_v4, 0, 0, 0);
     sizer_h9 -> Add(button_START, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
     sizer_h9 -> Add(button_STOP, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
@@ -197,152 +222,122 @@ CminerDlg::CminerDlg(wxWindow * parent)
     sizer_root -> Add(sizer_h9, 0, 0, 0);
     sizer_root -> Add(textctrl_ARC, 1, wxEXPAND | wxALL, 5);
     sizer_root -> Add(radiobox_LAN, 0, wxGROW | wxALIGN_CENTER_HORIZONTAL, 0);
-    button_CHSD = new wxButton(this, 11353, ".", wxDefaultPosition, wxSize(200, - 1));
-    button_CHTD = new wxButton(this, 11354, ".", wxDefaultPosition, wxSize(200, - 1));
-#ifdef WX1
-    sizer_v4h1 -> Add(button_CHSD, 0, wxALIGN_CENTER_VERTICAL | wxALL, 0);
-    sizer_v4h1 -> Add(smSTP3V2H1, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
-    sizer_v1 -> Add(sizer_DUP, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
-    sizer_v1 -> Add(sizer_v4h1, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
-#else
+#ifndef WX1
     wxBoxSizer * sizer_MD4 = new wxBoxSizer(wxHORIZONTAL);
-    wxBoxSizer * sizer_MFO = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer * sizer_PFO = new wxBoxSizer(wxHORIZONTAL);
     checkbox_DEB = new wxCheckBox(this, 11301, _T("Debug on/off"), wxDefaultPosition,
     wxDefaultSize, 0, wxDefaultValidator, "deb");
     checkbox_DEB -> SetValue(p_debugonoff);
-    button_FINDDUPS = new wxButton(this, 12302, "&Duplikate suchen und markieren",
-    sizer_DUP -> Add(button_FINDDUPS, 0, wxALIGN_CENTER_VERTICAL, 0) ;
     checkbox_MD4 = new wxCheckBox(this, 11312, _T(""), wxDefaultPosition,
-    wxDefaultSize, 0, wxDefaultValidator, "md4") ;
-    checkbox_MD4 -> SetValue(p_doMD4hashing) ;
-    wxButton * button_MD4HASHS = new wxButton(this, 12311, "&MD4-Hashing") ;
-    sizer_MD4 -> Add(checkbox_MD4, 0, wxALIGN_CENTER_VERTICAL, 0) ;
-    sizer_MD4 -> Add(button_MD4HASHS, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2) ;
-    wxButton * button_RENAME = new wxButton(this, 12331, "&Renaming and/or moving files") ;
+    wxDefaultSize, 0, wxDefaultValidator, "md4");
+    checkbox_MD4 -> SetValue(p_doMD4hashing);
+    wxButton * button_MD4HASHS = new wxButton(this, 12311, "&MD4-Hashing");
+    sizer_MD4 -> Add(checkbox_MD4, 0, wxALIGN_CENTER_VERTICAL, 0);
+    sizer_MD4 -> Add(button_MD4HASHS, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
     checkbox_APR = new wxCheckBox(this, 11316, _T("Add PicRes to filename"), wxDefaultPosition,
-    wxDefaultSize, 0, wxDefaultValidator, "ahd") ;
-    checkbox_APR -> SetValue(p_useAPRadding) ;
+    wxDefaultSize, 0, wxDefaultValidator, "ahd");
+    checkbox_APR -> SetValue(p_useAPRadding);
     checkbox_APC = new wxCheckBox(this, 11317, _T("Add PicCount to Dir"), wxDefaultPosition,
-    wxDefaultSize, 0, wxDefaultValidator, "apc") ;
-    checkbox_APC -> SetValue(p_addPICCtodir) ;
-    checkbox_MFO = new wxCheckBox(this, 11321, _T(""), wxDefaultPosition,
-    wxDefaultSize, 0, wxDefaultValidator, "mfo") ;
-    checkbox_MFO -> SetValue(p_metfilesonly) ;
-    wxButton * button_METFILES = new wxButton(this, 12321, "&Metfiles only") ;
-    sizer_MFO -> Add(checkbox_MFO, 0, wxALIGN_CENTER_VERTICAL, 0) ;
-    sizer_MFO -> Add(button_METFILES, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2) ;
+    wxDefaultSize, 0, wxDefaultValidator, "apc");
+    checkbox_APC -> SetValue(p_addPICCtodir);
     checkbox_PFO = new wxCheckBox(this, 11322, _T(""), wxDefaultPosition,
-    wxDefaultSize, 0, wxDefaultValidator, "pfo") ;
-    checkbox_PFO -> SetValue(p_partfilesonly) ;
-    wxButton * button_PARTFILES = new wxButton(this, 12322, "&Partfiles only") ;
-    sizer_PFO -> Add(checkbox_PFO, 0, wxALIGN_CENTER_VERTICAL, 0) ;
-    sizer_PFO -> Add(button_PARTFILES, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2) ;
-    checkbox_SELPIC = new wxCheckBox(this, 11324, _T("Select picturefiles"), wxDefaultPosition,
-    wxDefaultSize, 0, wxDefaultValidator, "pic") ;
-    checkbox_SELPIC -> SetValue(p_selectpicfiles) ;
-    checkbox_SELVID = new wxCheckBox(this, 11325, _T("Select videofiles"), wxDefaultPosition,
-    wxDefaultSize, 0, wxDefaultValidator, "vid") ;
-    checkbox_SELVID -> SetValue(p_selectvidfiles) ;
+    wxDefaultSize, 0, wxDefaultValidator, "pfo");
+    checkbox_PFO -> SetValue(p_partfilesonly);
+    wxButton * button_PARTFILES = new wxButton(this, 12322, "&Partfiles only");
+    sizer_PFO -> Add(checkbox_PFO, 0, wxALIGN_CENTER_VERTICAL, 0);
+    sizer_PFO -> Add(button_PARTFILES, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
+    checkbox_SELPIC = new wxCheckBox(this, 11324, _T("Select picturefiles"), wxDefaultPosition
+    , wxDefaultSize, 0, wxDefaultValidator, "pic");
+    checkbox_SELPIC -> SetValue(p_selectpicfiles);
+    checkbox_SELVID = new wxCheckBox(this, 11325, _T("Select videofiles"), wxDefaultPosition
+    , wxDefaultSize, 0, wxDefaultValidator, "vid");
+    checkbox_SELVID -> SetValue(p_selectvidfiles);
     checkbox_DFI = new wxCheckBox(this, 11332, _T("Generate Dir(/-File)tree"), wxDefaultPosition,
-    wxDefaultSize, 0, wxDefaultValidator, "dfi") ;
-    checkbox_DFI -> SetValue(p_usingdirfile) ;
+    wxDefaultSize, 0, wxDefaultValidator, "dfi");
+    checkbox_DFI -> SetValue(p_usingdirfile);
     checkbox_GST = new wxCheckBox(this, 11333, _T("Generate sampletree"), wxDefaultPosition,
-    wxDefaultSize, 0, wxDefaultValidator, "gsd") ;
-    checkbox_GST -> SetValue(p_createsample) ;
+    wxDefaultSize, 0, wxDefaultValidator, "gsd");
+    checkbox_GST -> SetValue(p_createsample);
     checkbox_FOO = new wxCheckBox(this, 11334, _T("...(with folders only)"), wxDefaultPosition,
-    wxDefaultSize, 0, wxDefaultValidator, "foo") ;
-    checkbox_FOO -> SetValue(p_foldersonly) ;
+    wxDefaultSize, 0, wxDefaultValidator, "foo");
+    checkbox_FOO -> SetValue(p_foldersonly);
     checkbox_WSF = new wxCheckBox(this, 11335, _T("...(without subfolders)"), wxDefaultPosition,
-    wxDefaultSize, 0, wxDefaultValidator, "wsf") ;
-    checkbox_WSF -> SetValue(p_nosubfolders) ;
+    wxDefaultSize, 0, wxDefaultValidator, "wsf");
+    checkbox_WSF -> SetValue(p_nosubfolders);
     checkbox_IGX = new wxCheckBox(this, 11336, _T("Don`t prefer *.x.*-files"), wxDefaultPosition,
-    wxDefaultSize, 0, wxDefaultValidator, "igx") ;
-    checkbox_IGX -> SetValue(p_createsample) ;
+    wxDefaultSize, 0, wxDefaultValidator, "igx");
+    checkbox_IGX -> SetValue(p_createsample);
 #endif
-    button_DBHANDLING = new wxButton(this, 11355, ".", wxDefaultPosition, wxSize(200, - 1)) ;
 #ifndef WX1
-    sizer_v1 -> Add(checkbox_DEB, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4) ;
-    sizer_v1 -> Add(button_DBHANDLING, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4) ;
-    sizer_v1 -> Add(sizer_DUP, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4) ;
-    sizer_v2 -> Add(sizer_MD4, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v2 -> Add(button_RENAME, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v2 -> Add(checkbox_APR, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v2 -> Add(checkbox_APC, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v3 -> Add(sizer_MFO, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v3 -> Add(sizer_PFO, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v3 -> Add(checkbox_SELPIC, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v3 -> Add(checkbox_SELVID, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v4h1 -> Add(button_CHSD, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v4h1 -> Add(smSTP3V2H1, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v4h2 -> Add(button_CHTD, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v4h2 -> Add(smSTP3V2H2, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v4 -> Add(sizer_v4h1, 0, 0, 0) ;
-    sizer_v4 -> Add(sizer_v4h2, 0, 0, 0) ;
-    sizer_v4 -> Add(checkbox_DFI, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v4 -> Add(checkbox_GST, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v4 -> Add(checkbox_FOO, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v4 -> Add(checkbox_WSF, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-    sizer_v4 -> Add(checkbox_IGX, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2) ;
-#else
-    sizer_v1 -> Add(button_DBHANDLING, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4) ;
-    sizer_v4h2 -> Add(button_CHTD, 0, wxALIGN_CENTER_VERTICAL | wxALL, 0) ;
-    sizer_v4h2 -> Add(smSTP3V2H2, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2) ;
-    sizer_v1 -> Add(sizer_v4h2, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4) ;
-    button_FINDDUPS = new wxButton(this, 12302, "&Duplikate suchen und markieren",
-    wxDefaultPosition, wxSize(200, - 1)) ;
-    sizer_DUP -> Add(button_FINDDUPS, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 0) ;
+    sizer_v1 -> Add(checkbox_DEB, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
+    sizer_v1 -> Add(sizer_DUP, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
+    sizer_v2 -> Add(sizer_MD4, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    wxButton * button_RENAME = new wxButton(this, 12331, "&Renaming and/or moving files");
+    sizer_v2 -> Add(button_RENAME, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    sizer_v2 -> Add(checkbox_APR, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    sizer_v2 -> Add(checkbox_APC, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    sizer_v3 -> Add(sizer_PFO, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    sizer_v3 -> Add(checkbox_SELPIC, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    sizer_v3 -> Add(checkbox_SELVID, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    sizer_v4 -> Add(sizer_v4h1, 0, 0, 0);
+    sizer_v4 -> Add(sizer_v4h2, 0, 0, 0);
+    sizer_v4 -> Add(checkbox_DFI, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    sizer_v4 -> Add(checkbox_GST, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    sizer_v4 -> Add(checkbox_FOO, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    sizer_v4 -> Add(checkbox_WSF, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    sizer_v4 -> Add(checkbox_IGX, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
 #endif
-    lan00German() ;
-    this -> SetSizer(sizer_root) ;
-    Connect(11353, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonCHSD) ;
-    Connect(11354, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonCHTD) ;
-    Connect(11351, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonSTART) ;
-    Connect(11352, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonSTOP) ;
-    Connect(11359, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonCLEAR) ;
-    Connect(11355, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonDBHANDLING) ;
-    Connect(12302, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonFINDDUPS) ;
-    Connect(20001, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxMAD) ;
-    Connect(20002, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxRED) ;
-    Connect(20003, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxDED) ;
-    Connect(20004, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxLOG) ;
+    lan00German();
+    this -> SetSizer(sizer_root);
+    Connect(11321, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxMFO);
+    Connect(11353, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonCHSD);
+    Connect(11354, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonCHTD);
+    Connect(11351, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonSTART);
+    Connect(11352, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonSTOP);
+    Connect(11359, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonCLEAR);
+    Connect(11355, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonDBHANDLING);
+    Connect(11371, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonProgramminfo);
+    Connect(11399, wxEVT_COMMAND_RADIOBOX_SELECTED, WXOEF & CminerDlg::RadioboxLAN);
+    Connect(12302, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonFINDDUPS);
+    Connect(12321, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonMETFILES);
+    Connect(20001, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxMAD);
+    Connect(20002, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxRED);
+    Connect(20003, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxDED);
+    Connect(20004, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxLOG);
+    Connect(20201, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxIFM);
+    Connect(20202, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxSFT);
+    Connect(20203, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCPM);
+    Connect(20501, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCreateDBentry);
+    Connect(20511, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ClearDatabase);
+    Connect(20512, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ImportDatabaseTXT);
+    Connect(20513, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ExportDatabaseTXT);
 #ifndef WX1
-    Connect(11301, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxDEB) ;
-    Connect(11312, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxMD4) ;
-    Connect(12311, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonMD4HASHS) ;
-    Connect(11316, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxAPR) ;
-    Connect(11317, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxAPC) ;
-    Connect(11321, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxMFO) ;
-    Connect(11322, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxPFO) ;
-    Connect(12321, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonMETFILES) ;
-    Connect(12322, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonPARTFILES) ;
-    Connect(11324, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxSELPIC) ;
-    Connect(11325, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxSELVID) ;
-    Connect(12331, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonRENAME) ;
-    Connect(11332, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxDFI) ;
-    Connect(11333, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxGST) ;
-    Connect(11334, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxFOO) ;
-    Connect(11335, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxWSF) ;
-    Connect(11336, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxIGX) ;
-    Connect(20101, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxAHF) ;
-    Connect(20102, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxFCK) ;
-    Connect(20103, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxIFO) ;
-    Connect(20104, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCMO) ;
-    Connect(20201, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxIFM) ;
-    Connect(20202, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxSFT) ;
-    Connect(20211, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxIFP) ;
-    Connect(20212, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCNE) ;
-    Connect(20301, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxAHD) ;
-    Connect(20302, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxMFL) ;
+    Connect(11301, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxDEB);
+    Connect(11312, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxMD4);
+    Connect(12311, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonMD4HASHS);
+    Connect(11316, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxAPR);
+    Connect(11317, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxAPC);
+    Connect(11322, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxPFO);
+    Connect(12322, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonPARTFILES);
+    Connect(11324, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxSELPIC);
+    Connect(11325, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxSELVID);
+    Connect(12331, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonRENAME);
+    Connect(11332, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxDFI);
+    Connect(11333, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxGST);
+    Connect(11334, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxFOO);
+    Connect(11335, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxWSF);
+    Connect(11336, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxIGX);
+    Connect(20101, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxAHF);
+    Connect(20102, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxFCK);
+    Connect(20103, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxIFO);
+    Connect(20104, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCMO);
+    Connect(20211, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxIFP);
+    Connect(20212, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCNE);
+    Connect(20301, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxAHD);
+    Connect(20302, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxMFL);
 #endif
-    Connect(11371, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonProgramminfo) ;
-    Connect(11399, wxEVT_COMMAND_RADIOBOX_SELECTED, WXOEF & CminerDlg::RadioboxLAN) ;
-    Connect(20501, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCreateDBentry) ;
-    Connect(20511, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ClearDatabase) ;
-    Connect(20512, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ImportDatabaseTXT) ;
-    Connect(20513, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ExportDatabaseTXT) ;
 #ifdef WITHGDBM
-    Connect(20514, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ImportDBMAIN) ;
+    Connect(20514, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ImportDBMAIN);
 #endif
     //Connect(20521, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ImportJpgFile);
 }
@@ -387,6 +382,7 @@ void CminerDlg::lan00German()
     button_STOP -> SetLabel("Analyse abbrechen");
     button_CLEAR -> SetLabel("Ausgabefenster loeschen");
     button_PINFO -> SetLabel("Programminfo");
+    button_METFILES -> SetLabel("Nur &Metfiles(ed2k)");
     smPMfinddups -> SetTitle(_T("Duplikate suchen und markieren"));
     smPMfinddups -> SetLabel(20001, "Duplikate markieren (.dup beim Duplikat-Dateinamen anhaengen)");
     smPMfinddups -> SetLabel(20002, "<.dup>-Markierungen wieder entfernen");
@@ -398,6 +394,10 @@ void CminerDlg::lan00German()
     smPMdbhandling -> SetLabel(20512, "Dateiinformationen importieren aus 'database.txt'");
     smPMdbhandling -> SetLabel(20513, "Dateiinformationen exportieren nach 'database.txt'");
     //smPMdbhandling ->SetLabel(20521, "JPG-File in Datenbank einbetten, Filename wird zum Key");
+    smPMmetfiles -> SetTitle(_T("Metfile(ed2k)-Verarbeitung"));
+    smPMmetfiles -> SetLabel(20201, "'.ism'-Infodateien generieren");
+    smPMmetfiles -> SetLabel(20202, "nach Dateitypen trennen");
+    smPMmetfiles -> SetLabel(20203, "Partfiles generieren, falls fehlend");
 }
 
 void CminerDlg::lan01English()
@@ -410,6 +410,7 @@ void CminerDlg::lan01English()
     button_STOP -> SetLabel("Cancel");
     button_CLEAR -> SetLabel("Clear Output-Window");
     button_PINFO -> SetLabel("Info");
+    button_METFILES -> SetLabel("&Metfiles only(ed2k)");
     smPMfinddups -> SetTitle(_T("Find and markup duplicates"));
     smPMfinddups -> SetLabel(20001, "Markup duplicates (appending <.dup>-extension to filename (renaming)");
     smPMfinddups -> SetLabel(20002, "Remove <.dup>-extension from filenames (renaming)");
@@ -421,6 +422,10 @@ void CminerDlg::lan01English()
     smPMdbhandling -> SetLabel(20512, "Import fileinfos to database from 'database.txt'");
     smPMdbhandling -> SetLabel(20513, "Export fileinfos from database to 'database.txt'");
     //smPMdbhandling ->SetLabel(20521, "Store jpg-file, key=filename");
+    smPMmetfiles -> SetTitle(_T("Metfile-Processing"));
+    smPMmetfiles -> SetLabel(20201, "Create '.ism'-infofiles");
+    smPMmetfiles -> SetLabel(20202, "Separate filetypes");
+    smPMmetfiles -> SetLabel(20203, "Create partfiles, if missing");
 }
 
 void CminerDlg::RadioboxLAN(wxCommandEvent & event)
@@ -841,8 +846,8 @@ void CminerDlg::ImportDatabaseTXT(wxCommandEvent & event)
                             dbSMmData = dbSMtmp -> fetchKey(1, dbSMmKey);
                             if (dbSMmData.ptr)
                             {
-                    //(new CpicFrame((wxFrame *)((smApp *) wxTheApp) -> smuledlg,
-                    //(char *) dbSMmData.ptr, dbSMmData.size, 200, 540, (char *) tempKey.ptr)) -> Show();
+                                //(new CpicFrame((wxFrame *)((smApp *) wxTheApp) -> smuledlg,
+                                //(char *) dbSMmData.ptr, dbSMmData.size, 200, 540, (char *) tempKey.ptr)) -> Show();
                                 free(dbSMmData.ptr);
                                 dbSMmData.ptr = NULL;
                                 dbSMmData.size = 0;
@@ -1058,7 +1063,7 @@ void CminerDlg::ButtonProgramminfo(wxCommandEvent & event)
     {
     case 0:
         W("Duplicatex v1.0 (Duplikatesucher v1.0)");
-		W("................(c) 2005 Frank Schaefer\n");
+        W("................(c) 2005 Frank Schaefer\n");
         W(".........................sf@mulinux.org\n");
         W("\n");
         W("Der Zweck des Programmes besteht darin, Duplikate von Dateien und Programmen aufzuspueren und zu");
@@ -1157,7 +1162,7 @@ void CminerDlg::ButtonDBHANDLING(wxCommandEvent & event)
 {
     if (!threadcount)
     {
-        PopupMenu(smPMdbhandling, 4, 72);
+        PopupMenu(smPMdbhandling, 200, 40);
     }
     else
     {
@@ -1193,7 +1198,7 @@ void CminerDlg::ButtonMETFILES(wxCommandEvent & event)
 {
     if (!threadcount)
     {
-        PopupMenu(smPMmetfiles, 340, 0);
+        PopupMenu(smPMmetfiles, 4, 28);
     }
     else
     {
@@ -1223,6 +1228,11 @@ void CminerDlg::ButtonRENAME(wxCommandEvent & event)
     {
         Message(101, "");
     }
+}
+
+void CminerDlg::CheckboxCPM(wxCommandEvent & event)
+{
+    p_crePartForMet = smPMmetfiles -> IsChecked(20203);
 }
 
 void CminerDlg::CheckboxDEB(wxCommandEvent & event)
@@ -1266,14 +1276,16 @@ void CminerDlg::CheckboxMFO(wxCommandEvent & event)
         p_metfilesonly = checkbox_MFO -> IsChecked();
         if (p_metfilesonly)
         {
-            p_selectpicfiles = false;
-            checkbox_SELPIC -> SetValue(p_selectpicfiles);
-            p_selectvidfiles = false;
-            checkbox_SELVID -> SetValue(p_selectvidfiles);
-            p_partfilesonly = false;
-            checkbox_PFO -> SetValue(p_partfilesonly);
-            p_doMD4hashing = false;
-            checkbox_MD4 -> SetValue(p_doMD4hashing);
+ /*
+ p_selectpicfiles = false;
+ checkbox_SELPIC -> SetValue(p_selectpicfiles);
+ p_selectvidfiles = false;
+ checkbox_SELVID -> SetValue(p_selectvidfiles);
+ p_partfilesonly = false;
+ checkbox_PFO -> SetValue(p_partfilesonly);
+ p_doMD4hashing = false;
+ checkbox_MD4 -> SetValue(p_doMD4hashing);
+    */
         }
     }
     else
@@ -1773,14 +1785,14 @@ void CminerDlg::AddingDir()
     deep++;
     subdir[deep] = opendir(dirbuffer[deep - 1]);
     dbfilecount = 0;
-/*
-    fp1 = fopen("dupli.STATUS", "r");
-    if (fp1)
-    {
-        (void) fread( & dbfilecount, 1, sizeof(dbfilecount), fp1);
-        fclose(fp1);
-    }
-*/
+ /*
+ fp1 = fopen("dupli.STATUS", "r");
+ if (fp1)
+ {
+ (void) fread( & dbfilecount, 1, sizeof(dbfilecount), fp1);
+ fclose(fp1);
+ }
+    */
     if (p_createsample)
     {
         sprintf(buffer, "%s/sample", theApp -> targetdirectory.c_str());
@@ -2168,14 +2180,14 @@ void CminerDlg::AddingDir()
     while (deep > 0);
     delete[] filename;
     delete[] filename3;
-/*
-    fp1 = fopen("dupli.STATUS", "w+r");
-    if (fp1)
-    {
-        fwrite( & dbfilecount, 1, sizeof(dbfilecount), fp1);
-        fclose(fp1);
-    }
-*/
+ /*
+ fp1 = fopen("dupli.STATUS", "w+r");
+ if (fp1)
+ {
+ fwrite( & dbfilecount, 1, sizeof(dbfilecount), fp1);
+ fclose(fp1);
+ }
+    */
     wxMutexGuiEnter();
     if (deep < 0)
     {
@@ -2600,33 +2612,37 @@ void CminerDlg::Process_Metfile(char * filepath, char * filename)
     if (mfile -> mf_filename)
     {
         strcpy(keybuffer, mfile -> mf_filehash);
-        if (strlen(sourcename) > strlen(theApp -> sourcedirectory.c_str()))
-        {
-            sprintf(databuffer, "%12lu:%s", mfile -> mf_filesize,
-            mfile -> mf_filename + strlen(theApp -> sourcedirectory.c_str()) + 1);
-        }
-        else
-        {
-            sprintf(databuffer, "%12lu:%s", mfile -> mf_filesize, mfile -> mf_filename);
-        }
+ /*
+ if (strlen(sourcename) >= (strlen(mfile->mf_filename)+strlen(theApp -> sourcedirectory.c_str())))
+ {
+ sprintf(databuffer, "%12lu:%s", mfile -> mf_filesize,
+ mfile -> mf_filename + strlen(theApp -> sourcedirectory.c_str()));
+ }
+ else
+ {
+ sprintf(databuffer, "%12lu:%s", mfile -> mf_filesize, mfile -> mf_filename);
+ }
+    */
+        sprintf(databuffer, "%12lu:%s", mfile -> mf_filesize, filename);
         char tempname[strlen(sourcename) + 32 + strlen(mfile -> mf_filename) ];
         if (CheckDatabase(keybuffer, databuffer, true))
         {
-            wxMutexGuiEnter();
-            sprintf(buffer, "%lu: ", count_filesprocessed);
-            textctrl_ARC -> AppendText(buffer);
-            //textctrl_ARC -> AppendText(filepath);
-            textctrl_ARC -> AppendText(filename);
-            //textctrl_ARC -> AppendText(mfile->mf_partfile);
-            textctrl_ARC -> AppendText(" >> ");
-            textctrl_ARC -> AppendText(mfile -> mf_filename);
-            sprintf(buffer, " %lu Bytes ", mfile -> mf_filesize);
-            textctrl_ARC -> AppendText(buffer);
-            textctrl_ARC -> AppendText(keybuffer);
-            textctrl_ARC -> AppendText("\n");
-            textctrl_ARC -> AppendText(dbSMmResult.ptr);
-            textctrl_ARC -> AppendText("\n");
-            wxMutexGuiLeave();
+            if (0)//strcmp(databuffer, (char *) dbSMmResult.ptr))
+            {
+                wxMutexGuiEnter();
+                sprintf(buffer, "\nDuplikate %lu: ", count_filesprocessed);
+                textctrl_ARC -> AppendText(buffer);
+                //textctrl_ARC -> AppendText(filepath);
+                textctrl_ARC -> AppendText(filename);
+                //textctrl_ARC -> AppendText(mfile->mf_partfile);
+                textctrl_ARC -> AppendText(" >> ");
+                textctrl_ARC -> AppendText(mfile -> mf_filename);
+                sprintf(buffer, " %lu Bytes ", mfile -> mf_filesize);
+                textctrl_ARC -> AppendText(buffer);
+                textctrl_ARC -> AppendText(keybuffer);
+                textctrl_ARC -> AppendText("\n");
+                wxMutexGuiLeave();
+            }
             if (p_logduples || p_markupduples)
             {
                 Rename(sourcename, false);

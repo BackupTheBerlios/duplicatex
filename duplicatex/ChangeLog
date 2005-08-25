@@ -14,3 +14,10 @@ Version 1.0.0
 *Update database-functionality (database.h+database.cpp) (adding index-reorg)
 -Database-Pictureintegration added
 *some bugs fixed (deleting keys)
+
+2005-08-25
+----------
+*ED2K-metfile-support added
+*finding metfile-duplicates against databasse
+*creating metfile-infofiles (*.ism) (ascii-Textfiles) 
+*no creation of database-entries from metfiles
