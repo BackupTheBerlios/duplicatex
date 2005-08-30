@@ -121,13 +121,13 @@ CminerDlg::CminerDlg(wxWindow * parent)
     smPMfinddups -> AppendCheckItem(20001, ".");
     smPMfinddups -> AppendCheckItem(20002, ".");
     smPMfinddups -> AppendSeparator();
-    smPMfinddups -> AppendCheckItem(20003, ".");
-    smPMfinddups -> AppendSeparator();
     smPMfinddups -> AppendCheckItem(20004, ".");
+    smPMfinddups -> AppendSeparator();
+    smPMfinddups -> AppendCheckItem(20005, ".");
     smPMfinddups -> Check(20001, p_markupduples);
     smPMfinddups -> Check(20002, p_removedupext);
-    smPMfinddups -> Check(20003, p_deleteduples);
-    smPMfinddups -> Check(20004, p_logduples);
+    smPMfinddups -> Check(20004, p_deleteduples);
+    smPMfinddups -> Check(20005, p_logduples);
     smPMdbhandling = new wxMenu("Datenbank-Verwaltung");
     smPMdbhandling -> AppendSeparator();
     smPMdbhandling -> AppendCheckItem(20501, ".");
@@ -140,13 +140,14 @@ CminerDlg::CminerDlg(wxWindow * parent)
 #endif
     //smPMdbhandling -> Append(20521, ".");
     smPMdbhandling -> Check(20501, p_creDBentry);
+    smPMhocfiles = new wxMenu("Verarbeitung überprüfter Dateien");
+    smPMhocfiles -> AppendCheckItem(20401, ".");
+    smPMhocfiles -> Check(20401, p_addMD4tofnam);
     smPMmd4hashs = new wxMenu("MD4-Hashprocessing");
-    smPMmd4hashs -> AppendCheckItem(20101, "Add MD4 to Filename");
     smPMmd4hashs -> AppendCheckItem(20102, "With fakecheck(slower)");
     smPMmd4hashs -> AppendSeparator();
     smPMmd4hashs -> AppendCheckItem(20103, "create .ism for *ALL");
     smPMmd4hashs -> AppendCheckItem(20104, "create .met for *ALL");
-    smPMmd4hashs -> Check(20101, p_addMD4tofnam);
     smPMmd4hashs -> Check(20102, p_doMD4fakechk);
     smPMmd4hashs -> Check(20103, p_creInfForAll);
     smPMmd4hashs -> Check(20104, p_creMetForAll);
@@ -186,6 +187,7 @@ CminerDlg::CminerDlg(wxWindow * parent)
     wxBoxSizer * sizer_v4h2 = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer * sizer_h9 = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer * sizer_DUP = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer * sizer_HOC = new wxBoxSizer(wxHORIZONTAL);
     smSTP3V2H1 = new wxStaticText(this, - 1, theApp -> sourcedirectory, wxDefaultPosition, wxSize(256, 24));
     smSTP3V2H2 = new wxStaticText(this, - 1, theApp -> targetdirectory, wxDefaultPosition, wxSize(256, 24));
     wxBoxSizer * sizer_MFO = new wxBoxSizer(wxHORIZONTAL);
@@ -197,12 +199,16 @@ CminerDlg::CminerDlg(wxWindow * parent)
     button_DBHANDLING = new wxButton(this, 11355, ".", wxDefaultPosition, wxSize(200, - 1));
     button_FINDDUPS = new wxButton(this, 12302, "&Duplikate suchen und markieren",
     wxDefaultPosition, wxSize(200, - 1));
+    button_HOCFILES = new wxButton(this, 12303, "&Verarbeitung überprüfter Dateien",
+    wxDefaultPosition, wxSize(200, - 1));
     button_CHSD = new wxButton(this, 11353, ".", wxDefaultPosition, wxSize(200, - 1));
     button_CHTD = new wxButton(this, 11354, ".", wxDefaultPosition, wxSize(200, - 1));
     sizer_DUP -> Add(button_FINDDUPS, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 0);
+    sizer_HOC -> Add(button_HOCFILES, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 0);
     sizer_MFO -> Add(button_METFILES, 0, wxLEFT, 2);
     sizer_v1 -> Add(sizer_DUP, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
     sizer_v1 -> Add(sizer_MFO, 0, wxALL, 2);
+    sizer_v1 -> Add(sizer_HOC, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
     sizer_v4h1 -> Add(button_CHSD, 0, wxALIGN_CENTER_VERTICAL | wxALL, 0);
     sizer_v4h1 -> Add(smSTP3V2H1, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
     sizer_v2 -> Add(sizer_v4h1, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
@@ -299,14 +305,16 @@ CminerDlg::CminerDlg(wxWindow * parent)
     Connect(11371, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonProgramminfo);
     Connect(11399, wxEVT_COMMAND_RADIOBOX_SELECTED, WXOEF & CminerDlg::RadioboxLAN);
     Connect(12302, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonFINDDUPS);
+    Connect(12303, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonHOCFILES);
     Connect(12321, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonMETFILES);
     Connect(20001, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxMAD);
     Connect(20002, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxRED);
-    Connect(20003, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxDED);
-    Connect(20004, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxLOG);
+    Connect(20004, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxDED);
+    Connect(20005, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxLOG);
     Connect(20201, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxIFM);
     Connect(20202, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxSFT);
     Connect(20203, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCPM);
+    Connect(20401, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxAHF);
     Connect(20501, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCreateDBentry);
     Connect(20511, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ClearDatabase);
     Connect(20512, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ImportDatabaseTXT);
@@ -327,7 +335,6 @@ CminerDlg::CminerDlg(wxWindow * parent)
     Connect(11334, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxFOO);
     Connect(11335, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxWSF);
     Connect(11336, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxIGX);
-    Connect(20101, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxAHF);
     Connect(20102, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxFCK);
     Connect(20103, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxIFO);
     Connect(20104, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCMO);
@@ -375,6 +382,7 @@ CminerDlg::~ CminerDlg()
 void CminerDlg::lan00German()
 {
     button_FINDDUPS -> SetLabel("&Duplikate suchen und markieren");
+    button_HOCFILES -> SetLabel("&Verarbeitung überprüfter Dateien");
     button_CHSD -> SetLabel("Zu analysierendes Verzeichnis");
     button_CHTD -> SetLabel("Datenbank-Verzeichnis");
     button_DBHANDLING -> SetLabel("Datenbank-Verwaltung");
@@ -386,8 +394,8 @@ void CminerDlg::lan00German()
     smPMfinddups -> SetTitle(_T("Duplikate suchen und markieren"));
     smPMfinddups -> SetLabel(20001, "Duplikate markieren (.dup beim Duplikat-Dateinamen anhaengen)");
     smPMfinddups -> SetLabel(20002, "<.dup>-Markierungen wieder entfernen");
-    smPMfinddups -> SetLabel(20003, "Duplikate loeschen (VORSICHT!!!, besser ^markieren^ verwenden!)");
-    smPMfinddups -> SetLabel(20004, "Gefundene Duplikate in Logfile eintragen <logfile.txt>");
+    smPMfinddups -> SetLabel(20004, "Duplikate loeschen (VORSICHT!!!, besser ^markieren^ verwenden!)");
+    smPMfinddups -> SetLabel(20005, "Gefundene Duplikate in Logfile eintragen <logfile.txt>");
     smPMdbhandling -> SetTitle("Datenbank-Verwaltung");
     smPMdbhandling -> SetLabel(20501, "Neue Dateiinformationen in der Datenbank ablegen (fuer nachfolgende Analysen)");
     smPMdbhandling -> SetLabel(20511, "Datenbankinhalt loeschen (zurücksetzen)");
@@ -398,11 +406,14 @@ void CminerDlg::lan00German()
     smPMmetfiles -> SetLabel(20201, "'.ism'-Infodateien generieren");
     smPMmetfiles -> SetLabel(20202, "nach Dateitypen trennen");
     smPMmetfiles -> SetLabel(20203, "Partfiles generieren, falls fehlend");
+    smPMhocfiles -> SetTitle(_T("Verarbeitung geprüfter Dateien"));
+    smPMhocfiles -> SetLabel(20401, "MD4-Hash in allen Dateinamen einbetten");
 }
 
 void CminerDlg::lan01English()
 {
     button_FINDDUPS -> SetLabel("&Find and markup duplicates");
+    button_HOCFILES -> SetLabel("&Handling of checked files");
     button_CHSD -> SetLabel("Directory for analyzing");
     button_CHTD -> SetLabel("Database-Directory");
     button_DBHANDLING -> SetLabel("Database-Management");
@@ -414,8 +425,8 @@ void CminerDlg::lan01English()
     smPMfinddups -> SetTitle(_T("Find and markup duplicates"));
     smPMfinddups -> SetLabel(20001, "Markup duplicates (appending <.dup>-extension to filename (renaming)");
     smPMfinddups -> SetLabel(20002, "Remove <.dup>-extension from filenames (renaming)");
-    smPMfinddups -> SetLabel(20003, "Delete duplicates (CAUTION!!) (better to use <markup duplicates>)");
-    smPMfinddups -> SetLabel(20004, "Logging of duplicates to <logfile.txt>");
+    smPMfinddups -> SetLabel(20004, "Delete duplicates (CAUTION!!) (better to use <markup duplicates>)");
+    smPMfinddups -> SetLabel(20005, "Logging of duplicates to <logfile.txt>");
     smPMdbhandling -> SetTitle("Database-Management");
     smPMdbhandling -> SetLabel(20501, "Store fileinfos (for further analyzing)");
     smPMdbhandling -> SetLabel(20511, "Clear database");
@@ -426,6 +437,8 @@ void CminerDlg::lan01English()
     smPMmetfiles -> SetLabel(20201, "Create '.ism'-infofiles");
     smPMmetfiles -> SetLabel(20202, "Separate filetypes");
     smPMmetfiles -> SetLabel(20203, "Create partfiles, if missing");
+    smPMhocfiles -> SetTitle(_T("Handling of checked files"));
+    smPMhocfiles -> SetLabel(20401, "Add MD4 to all filenames");
 }
 
 void CminerDlg::RadioboxLAN(wxCommandEvent & event)
@@ -1198,6 +1211,18 @@ void CminerDlg::ButtonFINDDUPS(wxCommandEvent & event)
     }
 }
 
+void CminerDlg::ButtonHOCFILES(wxCommandEvent & event)
+{
+    if (!threadcount)
+    {
+        PopupMenu(smPMhocfiles, 4, 68);
+    }
+    else
+    {
+        Message(101, "");
+    }
+}
+
 void CminerDlg::ButtonMD4HASHS(wxCommandEvent & event)
 {
     if (!threadcount)
@@ -1332,11 +1357,9 @@ void CminerDlg::CheckboxPFO(wxCommandEvent & event)
             p_creDBentry = false;
             smPMdbhandling -> Check(20501, p_creDBentry);
             p_addMD4tofnam = false;
-            smPMmd4hashs -> Check(20101, p_addMD4tofnam);
+            smPMmd4hashs -> Check(20401, p_addMD4tofnam);
             p_doMD4fakechk = true;
             smPMmd4hashs -> Check(20102, p_doMD4fakechk);
-            p_addMD4tofnam = false;
-            smPMmd4hashs -> Check(20101, p_addMD4tofnam);
         }
     }
     else
@@ -1506,7 +1529,7 @@ void CminerDlg::CheckboxMAD(wxCommandEvent & event)
             p_removedupext = false;
             smPMfinddups -> Check(20002, p_removedupext);
             p_deleteduples = false;
-            smPMfinddups -> Check(20003, p_deleteduples);
+            smPMfinddups -> Check(20004, p_deleteduples);
 #ifndef WX1
             p_doMD4hashing = true;
             checkbox_MD4 -> SetValue(p_doMD4hashing);
@@ -1530,7 +1553,7 @@ void CminerDlg::CheckboxRED(wxCommandEvent & event)
             p_markupduples = false;
             smPMfinddups -> Check(20001, p_markupduples);
             p_deleteduples = false;
-            smPMfinddups -> Check(20003, p_deleteduples);
+            smPMfinddups -> Check(20004, p_deleteduples);
         }
     }
     else
@@ -1557,7 +1580,7 @@ void CminerDlg::CheckboxDED(wxCommandEvent & event)
     {
         Message(101, "");
     }
-    smPMfinddups -> Check(20003, p_deleteduples);
+    smPMfinddups -> Check(20004, p_deleteduples);
 }
 
 void CminerDlg::CheckboxLOG(wxCommandEvent & event)
@@ -1565,12 +1588,12 @@ void CminerDlg::CheckboxLOG(wxCommandEvent & event)
     if (!threadcount)
     {
         p_logduples = !p_logduples;
-        smPMfinddups -> Check(20004, p_logduples);
+        smPMfinddups -> Check(20005, p_logduples);
     }
     else
     {
         Message(101, "");
-        smPMfinddups -> Check(20004, p_logduples);
+        smPMfinddups -> Check(20005, p_logduples);
     }
 }
 
@@ -1658,13 +1681,13 @@ void CminerDlg::CheckboxAHF(wxCommandEvent & event)
 {
     if (!threadcount)
     {
-        p_addMD4tofnam = smPMmd4hashs -> IsChecked(20101);
+        p_addMD4tofnam = !p_addMD4tofnam;
     }
     else
     {
-        smPMmd4hashs -> Check(20101, p_addMD4tofnam);
         Message(101, "");
     }
+        smPMmd4hashs -> Check(20401, p_addMD4tofnam);
 }
 
 void CminerDlg::CheckboxFCK(wxCommandEvent & event)

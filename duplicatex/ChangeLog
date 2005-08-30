@@ -21,3 +21,8 @@ Version 1.0.0
 *finding metfile-duplicates against databasse
 *creating metfile-infofiles (*.ism) (ascii-Textfiles) 
 *no creation of database-entries from metfiles
+
+2005-08-30
+----------
+*Handling of checked files added
+*Adding MD4-Hash (16 bytes == 32 characters) to filenames (optional)

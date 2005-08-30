@@ -66,6 +66,8 @@ class CminerDlg:public wxPanel
     /* MAD=markup duples, RED=Remove .dup-Extension, DED=Delete Duples*/
     wxMenu * smPMfinddups;
     void ButtonFINDDUPS(wxCommandEvent & event);
+    wxMenu * smPMhocfiles;
+    void ButtonHOCFILES(wxCommandEvent & event);
     void RadioboxLAN(wxCommandEvent & event);
     void CheckboxMAD(wxCommandEvent & event);
     void CheckboxRED(wxCommandEvent & event);
@@ -128,6 +130,7 @@ class CminerDlg:public wxPanel
     protected:
     CpicFrame * picfr001;
     wxButton * button_FINDDUPS;
+    wxButton * button_HOCFILES;
     wxButton * button_DBHANDLING;
     wxButton * button_METFILES;
     wxButton * button_CHSD;
