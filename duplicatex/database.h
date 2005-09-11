@@ -138,6 +138,7 @@ class CDatabase
     void SEARCH3(int indexnummer, DatabaseDatum * key, int & snr, int & e);
     void SEARCH4(int indexnummer, DatabaseDatum * key, int & snr, int & e);
     void SEARCH5(int indexnummer, DatabaseDatum & key, int & snr, int & e);
+    int GetMaxIndexLevel(int indexnummer);
     int CREATEtempkey(DatabaseDatum * key);
     private:
     char * dbFilename;

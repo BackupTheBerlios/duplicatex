@@ -46,9 +46,12 @@ class CminerDlg:public wxPanel
     void SetHostname(char * name);
     void SetLocalIP(char * ip);
     void SetStorageID(char * id);
+    void ButtonMATCHDOMAINclr(wxCommandEvent & event);
+    void ButtonMATCHURLclr(wxCommandEvent & event);
     void ButtonCHSD(wxCommandEvent & event);
     void ButtonCHTD(wxCommandEvent & event);
     void ButtonCLEAR(wxCommandEvent & event);
+    void ButtonPARSE(wxCommandEvent & event);
     void ButtonDBHANDLING(wxCommandEvent & event);
     void ExportDatabaseTXT(wxCommandEvent & event);
     void ImportDatabaseTXT(wxCommandEvent & event);
@@ -76,6 +79,9 @@ class CminerDlg:public wxPanel
     /*----------------------------------------------------------------*/
     void CheckboxAHD(wxCommandEvent & event);
     void CheckboxAHF(wxCommandEvent & event);
+    void CheckboxAHH(wxCommandEvent & event);
+    void CheckboxDW3(wxCommandEvent & event);
+    void CheckboxDPY(wxCommandEvent & event);
     void CheckboxAPR(wxCommandEvent & event);
     void CheckboxCNE(wxCommandEvent & event);
     void CheckboxDEB(wxCommandEvent & event);
@@ -95,6 +101,7 @@ class CminerDlg:public wxPanel
     void CheckboxMFO(wxCommandEvent & event);
     void CheckboxPFO(wxCommandEvent & event);
     void CheckboxSELPIC(wxCommandEvent & event);
+    void CheckboxMD4TOP(wxCommandEvent & event);
     void CheckboxSELVID(wxCommandEvent & event);
     void CheckboxAPC(wxCommandEvent & event);
     void CheckboxSFT(wxCommandEvent & event);
@@ -110,11 +117,17 @@ class CminerDlg:public wxPanel
     int GetFiletype(char * filename);
     void Process_Metfile(char * filepath, char * filename);
     void Process_Normalfile(char * filepath, char * filename);
+    void Process_Picturefile(char * filepath, char * filename);
+    void Process_WD3file(char * filepath, char * filename);
+    void Process_HTMfile(char * filepath, char * filename);
+    void Process_PRYfile(char * filepath, char * filename);
+    void LoadPicture(char * filepath, char * filename);
     bool running()
     {
         return(threadcount == 1);
         };
-    void Rename(char * sourcename, bool tofake);
+    void RenameNF(char * sourcename, bool tofake);
+    void HashAndRename(char * sourcename, char *extension,bool tohash);
     void WriteDirfile(char * filename, bool itemhasedpointer);
     void W(const char * text);
     void Message(int messageid, char * addon);
@@ -124,13 +137,17 @@ class CminerDlg:public wxPanel
     int filecountTST(char * filename);
     /****************************/
     public:
-    wxTextCtrl * textctrl_ARC;
+    wxTextCtrl * tctrl_ARC;
+    wxTextCtrl *tctrl_MATCHDOMAIN;
+    wxTextCtrl *tctrl_MATCHURL;
     char * DATABASEp;
     /****************************/
     protected:
     CpicFrame * picfr001;
     wxButton * button_FINDDUPS;
     wxButton * button_HOCFILES;
+    wxButton * button_MATCHDOMAINclr;
+    wxButton * button_MATCHURLclr;
     wxButton * button_DBHANDLING;
     wxButton * button_METFILES;
     wxButton * button_CHSD;
@@ -138,6 +155,7 @@ class CminerDlg:public wxPanel
     wxButton * button_START;
     wxButton * button_STOP;
     wxButton * button_CLEAR;
+    wxButton * button_PARSE;
     wxButton * button_PINFO;
     wxNotebook * smDlgNotebook;
     wxMenu * smPMmd4hashs;
@@ -163,12 +181,16 @@ class CminerDlg:public wxPanel
     bool p_cNewED2Kparts;
     bool p_doMD4hashing;
     bool p_addMD4tofnam;
+    bool p_addMD4tohtml;
+    bool p_delWD3files;
+    bool p_delPRYfiles;
     bool p_doMD4fakechk;
     bool p_addPICCtodir;
     bool p_doHDNsetting;
     bool p_moveLocation;
     bool p_useAPRadding;
     bool p_selectpicfiles;
+    bool p_writemd4hash;
     bool p_selectvidfiles;
     bool p_usingdirfile;
     bool p_nosubfolders;
@@ -192,20 +214,33 @@ class CminerDlg:public wxPanel
     wxCheckBox * checkbox_MFO;
     wxCheckBox * checkbox_PFO;
     wxCheckBox * checkbox_SELPIC;
+    wxCheckBox * checkbox_MD4TOP;
     wxCheckBox * checkbox_SELVID;
     /****************************/
     private:
+    int mil;
+    int lmil;
     int ftype;
+    int pictype;
+    int txttype;
     Cmd4hash * hash;
     CMetfile * mfile;
     char fileextension[20];
     struct stat * statbuffer;
     long dbfilecount;
     char * databuffer;
+    CDatabase * dbPI;
+    CDatabase * dbTX;
     CDatabase * dbSM;
     DatabaseDatum dbSMmKey;
     DatabaseDatum dbSMmData;
     DatabaseDatum dbSMmResult;
+    DatabaseDatum dbPIkey;
+    DatabaseDatum dbPIdata;
+    DatabaseDatum dbPIresult;
+    DatabaseDatum dbTXkey;
+    DatabaseDatum dbTXdata;
+    DatabaseDatum dbTXresult;
     long count_duplogged;
     long count_dupmarked;
     long count_dupremoved;
@@ -213,6 +248,7 @@ class CminerDlg:public wxPanel
     long count_fakmarked;
     long count_subdirsprocessed;
     long count_filesprocessed;
+    long count_filesmoved;
     long processcount;
     long filesize;
     char * sourcename;

@@ -26,3 +26,17 @@ Version 1.0.0
 ----------
 *Handling of checked files added
 *Adding MD4-Hash (16 bytes == 32 characters) to filenames (optional)
+
+2005-09-10
+----------
+*adding special jpg-fileformat-Support (additional database is used only for jpg-files now)
+*adding test of jpg-files and renaming jpg-files with errors (adding extension ".dkt" to these)
+*adding some other special support for wd3-, primary- & html-files
+*adding primary support of command-execution inside the output-window for further development
+*moving-out of jpg-files from sourcetree to new location (targetdir/PICWIDTHxPICHEIGHT/MD4HASH.jpg)
+-and storing MD4-hash into sourcelocation (original.jpg-content is 32-byte-ascii-MD4 after this)
+-(optional)
+*adding masking of basedir of sourcelocation (targetdir/basedir/*)
+*adding masking of complete full sourcelocation (targetdir/basedir/subdir1/subdir2/.../*)
+*optimized database-support
+

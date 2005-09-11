@@ -24,6 +24,8 @@
 #include "wxthread.h"
 
 #define WXOEF	(wxObjectEventFunction)
+#define WXEF	(wxEventFunction)
+#define WXCEF	(wxCommandEventFunction)
 
 #define NAMEZMAX	1000
 #define BUFFERSIZE	2048
@@ -43,6 +45,9 @@ char * dirbuffer[99];
 char tempname[BUFFERSIZE];
 int samplefilenamez = 0;
 int samplefilecount = 0;
+char matchdomain[65];
+char matchurl[65];
+int lmd, lmu;
 
 wxString Csprachen[] =
 {
@@ -88,6 +93,18 @@ CminerDlg::CminerDlg(wxWindow * parent)
     dbSMmKey.size = 16;
     dbSMmData.ptr = NULL;
     dbSMmData.size = 0;
+    dbPIkey.ptr = (unsigned char *) malloc(16);
+    dbPIkey.size = 16;
+    dbPIdata.ptr = NULL;
+    dbPIdata.size = 0;
+    dbPIresult.ptr = NULL;
+    dbPIresult.size = 0;
+    dbTXkey.ptr = (unsigned char *) malloc(16);
+    dbTXkey.size = 16;
+    dbTXdata.ptr = NULL;
+    dbTXdata.size = 0;
+    dbTXresult.ptr = NULL;
+    dbTXresult.size = 0;
     p_debugonoff = false;
     p_creDBentry = true;
     p_metfilesonly = false;
@@ -101,6 +118,9 @@ CminerDlg::CminerDlg(wxWindow * parent)
     p_partfilesonly = false;
     p_doMD4hashing = true;
     p_addMD4tofnam = false;
+    p_addMD4tohtml = false;
+    p_delWD3files = false;
+    p_delPRYfiles = false;
     p_doMD4fakechk = false;
     p_doHDNsetting = false;
     p_moveLocation = false;
@@ -111,11 +131,12 @@ CminerDlg::CminerDlg(wxWindow * parent)
     p_createsample = false;
     p_foldersonly = false;
     p_ignorexfiles = true;
-    p_markupduples = true;
+    p_markupduples = false;
     p_deleteduples = false;
-    p_logduples = true;
+    p_logduples = false;
     p_removedupext = false;
     p_selectpicfiles = false;
+    p_writemd4hash = false;
     p_selectvidfiles = false;
     smPMfinddups = new wxMenu("Duplikate suchen und markieren");
     smPMfinddups -> AppendCheckItem(20001, ".");
@@ -142,7 +163,13 @@ CminerDlg::CminerDlg(wxWindow * parent)
     smPMdbhandling -> Check(20501, p_creDBentry);
     smPMhocfiles = new wxMenu("Verarbeitung überprüfter Dateien");
     smPMhocfiles -> AppendCheckItem(20401, ".");
+    smPMhocfiles -> AppendCheckItem(20402, ".");
+    smPMhocfiles -> AppendCheckItem(20403, ".");
+    smPMhocfiles -> AppendCheckItem(20404, ".");
     smPMhocfiles -> Check(20401, p_addMD4tofnam);
+    smPMhocfiles -> Check(20402, p_addMD4tohtml);
+    smPMhocfiles -> Check(20403, p_delWD3files);
+    smPMhocfiles -> Check(20404, p_delPRYfiles);
     smPMmd4hashs = new wxMenu("MD4-Hashprocessing");
     smPMmd4hashs -> AppendCheckItem(20102, "With fakecheck(slower)");
     smPMmd4hashs -> AppendSeparator();
@@ -172,22 +199,28 @@ CminerDlg::CminerDlg(wxWindow * parent)
     button_START = new wxButton(this, 11351, ".", wxDefaultPosition, wxSize(128, 24));
     button_STOP = new wxButton(this, 11352, ".", wxDefaultPosition, wxSize(128, 24));
     button_CLEAR = new wxButton(this, 11359, ".", wxDefaultPosition, wxSize(160, 24));
+    button_PARSE = new wxButton(this, 12001, ".", wxDefaultPosition, wxSize(160, 24));
     button_PINFO = new wxButton(this, 11371, ".", wxDefaultPosition, wxSize(128, 24));
     radiobox_LAN = new wxRadioBox((wxWindow *) this, 11399, "Sprache/Language", wxDefaultPosition,
     wxDefaultSize, WXSIZEOF(Csprachen), Csprachen, 0);
-    textctrl_ARC = new wxTextCtrl(this, - 1, "", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
-    textctrl_ARC -> SetEditable(false);
+    tctrl_ARC = new wxTextCtrl(this, - 1, "", wxDefaultPosition, wxDefaultSize
+    , wxTE_MULTILINE);
+    tctrl_ARC -> SetEditable(true);
     wxBoxSizer * sizer_root = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer * sizer_h1 = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer * sizer_v1 = new wxBoxSizer(wxVERTICAL);
+    wxBoxSizer * sizer_v1h1 = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer * sizer_v2 = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer * sizer_v3 = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer * sizer_v4 = new wxBoxSizer(wxVERTICAL);
     wxBoxSizer * sizer_v4h1 = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer * sizer_v4h2 = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer * sizer_h8 = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer * sizer_h9 = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer * sizer_DUP = new wxBoxSizer(wxHORIZONTAL);
     wxBoxSizer * sizer_HOC = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer * sizer_MATCHDOMAIN = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer * sizer_MATCHURL = new wxBoxSizer(wxHORIZONTAL);
     smSTP3V2H1 = new wxStaticText(this, - 1, theApp -> sourcedirectory, wxDefaultPosition, wxSize(256, 24));
     smSTP3V2H2 = new wxStaticText(this, - 1, theApp -> targetdirectory, wxDefaultPosition, wxSize(256, 24));
     wxBoxSizer * sizer_MFO = new wxBoxSizer(wxHORIZONTAL);
@@ -203,12 +236,45 @@ CminerDlg::CminerDlg(wxWindow * parent)
     wxDefaultPosition, wxSize(200, - 1));
     button_CHSD = new wxButton(this, 11353, ".", wxDefaultPosition, wxSize(200, - 1));
     button_CHTD = new wxButton(this, 11354, ".", wxDefaultPosition, wxSize(200, - 1));
+    checkbox_SELPIC = new wxCheckBox(this, 11324, _T("wwwwwwwwwwwwwwwwwwwwwww"), wxDefaultPosition
+    , wxSize(140, - 1), 0, wxDefaultValidator, "pic");
+    checkbox_SELPIC -> SetValue(p_selectpicfiles);
+    checkbox_MD4TOP = new wxCheckBox(this, 11325, _T("wwwwwwwwwwwwwwwwwwwwwww"), wxDefaultPosition
+    , wxSize(140, - 1), 0, wxDefaultValidator, "wmh");
+    checkbox_MD4TOP -> SetValue(p_writemd4hash);
+ /*
+ checkbox_SELVID = new wxCheckBox(this, 11326, _T("wwwwwwwwwwwwwwwwwwwwwww"), wxDefaultPosition
+ , wxDefaultSize, 0, wxDefaultValidator, "vid");
+ checkbox_SELVID -> SetValue(p_selectvidfiles);
+    */
     sizer_DUP -> Add(button_FINDDUPS, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 0);
     sizer_HOC -> Add(button_HOCFILES, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 0);
+    wxStaticText * stext_MATCHDOMAIN = new wxStaticText(this, - 1, "Matchbase"
+    , wxDefaultPosition, wxSize(80, 16));
+    tctrl_MATCHDOMAIN = new wxTextCtrl(this, - 1, "", wxDefaultPosition, wxSize(80, 16), 0);
+    tctrl_MATCHDOMAIN -> SetMaxLength(64);
+    button_MATCHDOMAINclr = new wxButton(this, 11451, "CLR", wxDefaultPosition, wxSize(32, 16));
+    sizer_MATCHDOMAIN -> Add(stext_MATCHDOMAIN, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
+    sizer_MATCHDOMAIN -> Add(tctrl_MATCHDOMAIN, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
+    sizer_MATCHDOMAIN -> Add(button_MATCHDOMAINclr, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
+    wxStaticText * stext_MATCHURL = new wxStaticText(this, - 1, "Matchall"
+    , wxDefaultPosition, wxSize(80, 16));
+    tctrl_MATCHURL = new wxTextCtrl(this, - 1, "", wxDefaultPosition, wxSize(80, 16), 0);
+    tctrl_MATCHURL -> SetMaxLength(64);
+    button_MATCHURLclr = new wxButton(this, 11452, "CLR", wxDefaultPosition, wxSize(32, 16));
+    sizer_MATCHURL -> Add(stext_MATCHURL, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
+    sizer_MATCHURL -> Add(tctrl_MATCHURL, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
+    sizer_MATCHURL -> Add(button_MATCHURLclr, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
     sizer_MFO -> Add(button_METFILES, 0, wxLEFT, 2);
     sizer_v1 -> Add(sizer_DUP, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
     sizer_v1 -> Add(sizer_MFO, 0, wxALL, 2);
     sizer_v1 -> Add(sizer_HOC, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
+    sizer_v1 -> Add(sizer_MATCHDOMAIN, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
+    sizer_v1 -> Add(sizer_MATCHURL, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
+    sizer_v1h1 -> Add(checkbox_SELPIC, 0, wxALL, 2);
+    sizer_v1h1 -> Add(checkbox_MD4TOP, 0, wxALL, 2);
+    sizer_v1 -> Add(sizer_v1h1, 0, wxALL, 4);
+    //sizer_v1 -> Add(checkbox_SELVID, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
     sizer_v4h1 -> Add(button_CHSD, 0, wxALIGN_CENTER_VERTICAL | wxALL, 0);
     sizer_v4h1 -> Add(smSTP3V2H1, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
     sizer_v2 -> Add(sizer_v4h1, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
@@ -220,13 +286,15 @@ CminerDlg::CminerDlg(wxWindow * parent)
     sizer_h1 -> Add(sizer_v2, 0, 0, 0);
     sizer_h1 -> Add(sizer_v3, 1, wxGROW, 0);
     sizer_h1 -> Add(sizer_v4, 0, 0, 0);
-    sizer_h9 -> Add(button_START, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
-    sizer_h9 -> Add(button_STOP, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    sizer_h8 -> Add(button_START, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
+    sizer_h8 -> Add(button_STOP, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    sizer_h8 -> Add(button_PINFO, 1, wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL | wxALL, 2);
     sizer_h9 -> Add(button_CLEAR, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
-    sizer_h9 -> Add(button_PINFO, 1, wxALIGN_RIGHT | wxALIGN_CENTER_VERTICAL | wxALL, 2);
+    sizer_h9 -> Add(button_PARSE, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
     sizer_root -> Add(sizer_h1, 0, 0, 0);
+    sizer_root -> Add(sizer_h8, 0, 0, 0);
+    sizer_root -> Add(tctrl_ARC, 1, wxEXPAND | wxALL, 5);
     sizer_root -> Add(sizer_h9, 0, 0, 0);
-    sizer_root -> Add(textctrl_ARC, 1, wxEXPAND | wxALL, 5);
     sizer_root -> Add(radiobox_LAN, 0, wxGROW | wxALIGN_CENTER_HORIZONTAL, 0);
 #ifndef WX1
     wxBoxSizer * sizer_MD4 = new wxBoxSizer(wxHORIZONTAL);
@@ -252,12 +320,6 @@ CminerDlg::CminerDlg(wxWindow * parent)
     wxButton * button_PARTFILES = new wxButton(this, 12322, "&Partfiles only");
     sizer_PFO -> Add(checkbox_PFO, 0, wxALIGN_CENTER_VERTICAL, 0);
     sizer_PFO -> Add(button_PARTFILES, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
-    checkbox_SELPIC = new wxCheckBox(this, 11324, _T("Select picturefiles"), wxDefaultPosition
-    , wxDefaultSize, 0, wxDefaultValidator, "pic");
-    checkbox_SELPIC -> SetValue(p_selectpicfiles);
-    checkbox_SELVID = new wxCheckBox(this, 11325, _T("Select videofiles"), wxDefaultPosition
-    , wxDefaultSize, 0, wxDefaultValidator, "vid");
-    checkbox_SELVID -> SetValue(p_selectvidfiles);
     checkbox_DFI = new wxCheckBox(this, 11332, _T("Generate Dir(/-File)tree"), wxDefaultPosition,
     wxDefaultSize, 0, wxDefaultValidator, "dfi");
     checkbox_DFI -> SetValue(p_usingdirfile);
@@ -273,8 +335,6 @@ CminerDlg::CminerDlg(wxWindow * parent)
     checkbox_IGX = new wxCheckBox(this, 11336, _T("Don`t prefer *.x.*-files"), wxDefaultPosition,
     wxDefaultSize, 0, wxDefaultValidator, "igx");
     checkbox_IGX -> SetValue(p_createsample);
-#endif
-#ifndef WX1
     sizer_v1 -> Add(checkbox_DEB, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
     sizer_v1 -> Add(sizer_DUP, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
     sizer_v2 -> Add(sizer_MD4, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
@@ -283,8 +343,6 @@ CminerDlg::CminerDlg(wxWindow * parent)
     sizer_v2 -> Add(checkbox_APR, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
     sizer_v2 -> Add(checkbox_APC, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
     sizer_v3 -> Add(sizer_PFO, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
-    sizer_v3 -> Add(checkbox_SELPIC, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
-    sizer_v3 -> Add(checkbox_SELVID, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
     sizer_v4 -> Add(sizer_v4h1, 0, 0, 0);
     sizer_v4 -> Add(sizer_v4h2, 0, 0, 0);
     sizer_v4 -> Add(checkbox_DFI, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
@@ -295,6 +353,7 @@ CminerDlg::CminerDlg(wxWindow * parent)
 #endif
     lan00German();
     this -> SetSizer(sizer_root);
+    Connect(12001, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonPARSE);
     Connect(11321, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxMFO);
     Connect(11353, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonCHSD);
     Connect(11354, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonCHTD);
@@ -315,10 +374,18 @@ CminerDlg::CminerDlg(wxWindow * parent)
     Connect(20202, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxSFT);
     Connect(20203, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCPM);
     Connect(20401, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxAHF);
+    Connect(20402, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxAHH);
+    Connect(20403, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxDW3);
+    Connect(20404, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxDPY);
     Connect(20501, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCreateDBentry);
     Connect(20511, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ClearDatabase);
     Connect(20512, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ImportDatabaseTXT);
     Connect(20513, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ExportDatabaseTXT);
+    Connect(11324, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxSELPIC);
+    Connect(11325, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxMD4TOP);
+    //Connect(11326, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxSELVID);
+    Connect(11451, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonMATCHDOMAINclr);
+    Connect(11452, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonMATCHURLclr);
 #ifndef WX1
     Connect(11301, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxDEB);
     Connect(11312, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxMD4);
@@ -327,8 +394,6 @@ CminerDlg::CminerDlg(wxWindow * parent)
     Connect(11317, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxAPC);
     Connect(11322, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxPFO);
     Connect(12322, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonPARTFILES);
-    Connect(11324, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxSELPIC);
-    Connect(11325, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxSELVID);
     Connect(12331, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonRENAME);
     Connect(11332, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxDFI);
     Connect(11333, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxGST);
@@ -381,6 +446,9 @@ CminerDlg::~ CminerDlg()
 
 void CminerDlg::lan00German()
 {
+    checkbox_SELPIC -> SetLabel("Bilder exportieren");
+    checkbox_MD4TOP -> SetLabel("MD4-Hash schreiben");
+    //checkbox_SELVID -> SetLabel("Videos verarbeiten");
     button_FINDDUPS -> SetLabel("&Duplikate suchen und markieren");
     button_HOCFILES -> SetLabel("&Verarbeitung überprüfter Dateien");
     button_CHSD -> SetLabel("Zu analysierendes Verzeichnis");
@@ -388,7 +456,8 @@ void CminerDlg::lan00German()
     button_DBHANDLING -> SetLabel("Datenbank-Verwaltung");
     button_START -> SetLabel("Analyse starten");
     button_STOP -> SetLabel("Analyse abbrechen");
-    button_CLEAR -> SetLabel("Ausgabefenster loeschen");
+    button_CLEAR -> SetLabel("Fensterinhalt loeschen");
+    button_PARSE -> SetLabel("Fensterinhalt parsen");
     button_PINFO -> SetLabel("Programminfo");
     button_METFILES -> SetLabel("Nur &Metfiles(ed2k)");
     smPMfinddups -> SetTitle(_T("Duplikate suchen und markieren"));
@@ -408,18 +477,25 @@ void CminerDlg::lan00German()
     smPMmetfiles -> SetLabel(20203, "Partfiles generieren, falls fehlend");
     smPMhocfiles -> SetTitle(_T("Verarbeitung geprüfter Dateien"));
     smPMhocfiles -> SetLabel(20401, "MD4-Hash in allen Dateinamen einbetten");
+    smPMhocfiles -> SetLabel(20402, "MD4-Hash in html-Dateinamen einbetten");
+    smPMhocfiles -> SetLabel(20403, "WD3-Files löschen");
+    smPMhocfiles -> SetLabel(20404, "Primary-Files löschen");
 }
 
 void CminerDlg::lan01English()
 {
+    checkbox_SELPIC -> SetLabel("Exporting picturefiles");
+    checkbox_MD4TOP -> SetLabel("Write MD4-hash");
+    //checkbox_SELVID -> SetLabel("Exporting videofiles");
     button_FINDDUPS -> SetLabel("&Find and markup duplicates");
-    button_HOCFILES -> SetLabel("&Handling of checked files");
+    button_HOCFILES -> SetLabel("&Processing checked files");
     button_CHSD -> SetLabel("Directory for analyzing");
     button_CHTD -> SetLabel("Database-Directory");
     button_DBHANDLING -> SetLabel("Database-Management");
     button_START -> SetLabel("START");
     button_STOP -> SetLabel("Cancel");
-    button_CLEAR -> SetLabel("Clear Output-Window");
+    button_CLEAR -> SetLabel("Clear window");
+    button_PARSE -> SetLabel("Parse window");
     button_PINFO -> SetLabel("Info");
     button_METFILES -> SetLabel("&Metfiles only(ed2k)");
     smPMfinddups -> SetTitle(_T("Find and markup duplicates"));
@@ -439,6 +515,45 @@ void CminerDlg::lan01English()
     smPMmetfiles -> SetLabel(20203, "Create partfiles, if missing");
     smPMhocfiles -> SetTitle(_T("Handling of checked files"));
     smPMhocfiles -> SetLabel(20401, "Add MD4 to all filenames");
+    smPMhocfiles -> SetLabel(20402, "Add MD4 to html-filenames");
+    smPMhocfiles -> SetLabel(20403, "Delete WD3-files");
+    smPMhocfiles -> SetLabel(20404, "Delete Primary-files");
+}
+
+void CminerDlg::ButtonPARSE(wxCommandEvent & event)
+{
+    char * txt;
+    char zeile[256];
+    int l, p, z, zp;
+    l = strlen(tctrl_ARC -> GetValue() .c_str());
+    txt = (char *) malloc(l + 1);
+    memset(txt, 0, l + 1);
+    strncpy(txt, tctrl_ARC -> GetValue() .c_str(), l);
+    p = 0;
+    z = 0;
+    zp = 0;
+    memset(zeile, 0, 256);
+    while (p < l)
+    {
+        switch (txt[p])
+        {
+        case 10:
+        case 13:
+            z++;
+            printf("input: %s\n", zeile);
+            zp = 0;
+            memset(zeile, 0, 256);
+            break;
+        default:
+            if (zp < 255)
+            {
+                zeile[zp++] = txt[p];
+            }
+            break;
+        }
+        p++;
+    }
+    free(txt);
 }
 
 void CminerDlg::RadioboxLAN(wxCommandEvent & event)
@@ -485,6 +600,16 @@ void CminerDlg::SetStorageID(char * id)
     strcpy(storageid, id);
 }
 
+void CminerDlg::ButtonMATCHDOMAINclr(wxCommandEvent & event)
+{
+    tctrl_MATCHDOMAIN -> Clear();
+}
+
+void CminerDlg::ButtonMATCHURLclr(wxCommandEvent & event)
+{
+    tctrl_MATCHURL -> Clear();
+}
+
 void CminerDlg::ButtonCHSD(wxCommandEvent & event)
 {
     if (!threadcount)
@@ -493,7 +618,7 @@ void CminerDlg::ButtonCHSD(wxCommandEvent & event)
         if (fdSD -> ShowModal() == wxID_OK)
         {
             theApp -> sourcedirectory = fdSD -> GetPath();
-            char * sd = (char*)theApp -> sourcedirectory.c_str();
+            char * sd = (char *) theApp -> sourcedirectory.c_str();
             for (unsigned int i = 0 ; i < strlen(sd) ; i++)
             {
                 if (sd[i] == '\\')
@@ -519,7 +644,7 @@ void CminerDlg::ButtonCHTD(wxCommandEvent & event)
         if (fdTD -> ShowModal() == wxID_OK)
         {
             theApp -> targetdirectory = fdTD -> GetPath();
-            char * td = (char*)theApp -> targetdirectory.c_str();
+            char * td = (char *) theApp -> targetdirectory.c_str();
             for (unsigned int i = 0 ; i < strlen(td) ; i++)
             {
                 if (td[i] == '\\')
@@ -555,13 +680,13 @@ void CminerDlg::Message(int mid, char * buffer)
             W("beendet.\n");
             break;
         case 93:
-            textctrl_ARC -> AppendText("Analyse vorzeitig abgebrochen!\n");
+            tctrl_ARC -> AppendText("Analyse vorzeitig abgebrochen!\n");
             break;
         case 94:
-            textctrl_ARC -> AppendText("... Analyse nicht aktiv, deshalb gibts auch nix zu stoppen!\n");
+            tctrl_ARC -> AppendText("... Analyse nicht aktiv, deshalb gibts auch nix zu stoppen!\n");
             break;
         case 95:
-            textctrl_ARC -> AppendText("Analyse gestartet.\n");
+            tctrl_ARC -> AppendText("Analyse gestartet.\n");
             break;
         case 99:
             W(_T("Fehler beim Öffnen der Datenbank\n"));
@@ -590,7 +715,7 @@ void CminerDlg::Message(int mid, char * buffer)
             W("... analyzing not active.\n");
             break;
         case 95:
-            textctrl_ARC -> AppendText("Thread started.\n");
+            tctrl_ARC -> AppendText("Thread started.\n");
             break;
         case 99:
             W(_T("error on database-open\n"));
@@ -890,7 +1015,7 @@ void CminerDlg::ImportDatabaseTXT(wxCommandEvent & event)
                                     counter++;
                                     if ((counter% 1000) == 1)
                                     {
-                                        textctrl_ARC -> AppendText(_T("."));
+                                        tctrl_ARC -> AppendText(_T("."));
                                     }
                                 }
                             }
@@ -913,7 +1038,7 @@ void CminerDlg::ImportDatabaseTXT(wxCommandEvent & event)
                             counter++;
                             if ((counter% 1000) == 1)
                             {
-                                textctrl_ARC -> AppendText(_T("."));
+                                tctrl_ARC -> AppendText(_T("."));
                             }
                             memcpy(dbSMmKey.ptr, tempKey.ptr + 8, 8);
                             memcpy(dbSMmKey.ptr + 8, tempKey.ptr, 8);
@@ -964,7 +1089,7 @@ void CminerDlg::ImportJpgFile(wxCommandEvent & event)
                 strcpy(datafile, fdDATA -> GetFilename() .GetData());
                 DatabaseDatum tempKey;
                 sprintf(buffer, "Import laueft: %s ", datafile);
-                textctrl_ARC -> AppendText(buffer);
+                tctrl_ARC -> AppendText(buffer);
                 tempKey.ptr = (unsigned char *) malloc(17);
                 tempKey.size = strlen(datafile) + 1;
                 if (tempKey.size > 16)
@@ -982,7 +1107,7 @@ void CminerDlg::ImportJpgFile(wxCommandEvent & event)
                 }
                 else
                 {
-                    textctrl_ARC -> AppendText(_T("  Datei existiert schon in der Datenbank.\n"));
+                    tctrl_ARC -> AppendText(_T("  Datei existiert schon in der Datenbank.\n"));
                 }
                 dbSMmData = dbSMtmp -> fetchKey(1, tempKey);
                 if (dbSMmData.ptr)
@@ -1020,7 +1145,7 @@ void CminerDlg::ImportDBMAIN(wxCommandEvent & event)
             dbMainFP = gdbm_open(buffer, 0, GDBM_READER | GDBM_NOLOCK, 0, NULL);
             if (!dbMainFP)
             {
-                textctrl_ARC -> AppendText(_T("error on gdbm_open\n"));
+                tctrl_ARC -> AppendText(_T("error on gdbm_open\n"));
             }
             else
             {
@@ -1037,7 +1162,7 @@ void CminerDlg::ImportDBMAIN(wxCommandEvent & event)
                         gdbmData = gdbm_fetch(dbMainFP, gdbmKey);
                         if (!gdbmData.dptr)
                         {
-                            textctrl_ARC -> AppendText(_T("error after gdbm_fetch\n"));
+                            tctrl_ARC -> AppendText(_T("error after gdbm_fetch\n"));
                         }
                         else
                         {
@@ -1045,7 +1170,7 @@ void CminerDlg::ImportDBMAIN(wxCommandEvent & event)
                             dbSMmData = dbSM -> fetchKey(1, dbSMmKey);
                             if ((counter% 1000) == 1)
                             {
-                                textctrl_ARC -> AppendText(_T("."));
+                                tctrl_ARC -> AppendText(_T("."));
                             }
                             if (dbSMmData.ptr)
                             {
@@ -1087,7 +1212,7 @@ void CminerDlg::ImportDBMAIN(wxCommandEvent & event)
 #endif
 void CminerDlg::ButtonProgramminfo(wxCommandEvent & event)
 {
-    textctrl_ARC -> Clear();
+    tctrl_ARC -> Clear();
     switch (sprache)
     {
     case 0:
@@ -1147,13 +1272,13 @@ void CminerDlg::ButtonProgramminfo(wxCommandEvent & event)
         break;
     case 1:
         break;
-        textctrl_ARC -> SetEditable(false);
+        tctrl_ARC -> SetEditable(false);
     }
 }
 
 void CminerDlg::ButtonCLEAR(wxCommandEvent & event)
 {
-    textctrl_ARC -> Clear();
+    tctrl_ARC -> Clear();
 }
 
 void CminerDlg::ButtonSTART(wxCommandEvent & event)
@@ -1318,11 +1443,11 @@ void CminerDlg::CheckboxMFO(wxCommandEvent & event)
         p_metfilesonly = checkbox_MFO -> IsChecked();
         if (p_metfilesonly)
         {
+            p_selectpicfiles = false;
+            checkbox_SELPIC -> SetValue(p_selectpicfiles);
+            p_selectvidfiles = false;
+            //checkbox_SELVID -> SetValue(p_selectvidfiles);
  /*
- p_selectpicfiles = false;
- checkbox_SELPIC -> SetValue(p_selectpicfiles);
- p_selectvidfiles = false;
- checkbox_SELVID -> SetValue(p_selectvidfiles);
  p_partfilesonly = false;
  checkbox_PFO -> SetValue(p_partfilesonly);
  p_doMD4hashing = false;
@@ -1347,7 +1472,7 @@ void CminerDlg::CheckboxPFO(wxCommandEvent & event)
             p_selectpicfiles = false;
             checkbox_SELPIC -> SetValue(p_selectpicfiles);
             p_selectvidfiles = false;
-            checkbox_SELVID -> SetValue(p_selectvidfiles);
+            //checkbox_SELVID -> SetValue(p_selectvidfiles);
             p_metfilesonly = false;
             checkbox_MFO -> SetValue(p_metfilesonly);
             p_doMD4hashing = true;
@@ -1357,7 +1482,9 @@ void CminerDlg::CheckboxPFO(wxCommandEvent & event)
             p_creDBentry = false;
             smPMdbhandling -> Check(20501, p_creDBentry);
             p_addMD4tofnam = false;
-            smPMmd4hashs -> Check(20401, p_addMD4tofnam);
+            smPMhocfiles -> Check(20401, p_addMD4tofnam);
+            p_addMD4tohtml = false;
+            smPMhocfiles -> Check(20402, p_addMD4tohtml);
             p_doMD4fakechk = true;
             smPMmd4hashs -> Check(20102, p_doMD4fakechk);
         }
@@ -1642,13 +1769,6 @@ void CminerDlg::CheckboxSELPIC(wxCommandEvent & event)
     if (!threadcount)
     {
         p_selectpicfiles = !p_selectpicfiles;
-        if (p_selectpicfiles)
-        {
-            p_metfilesonly = false;
-            checkbox_MFO -> SetValue(p_metfilesonly);
-            p_partfilesonly = false;
-            checkbox_PFO -> SetValue(p_metfilesonly);
-        }
     }
     else
     {
@@ -1657,24 +1777,30 @@ void CminerDlg::CheckboxSELPIC(wxCommandEvent & event)
     checkbox_SELPIC -> SetValue(p_selectpicfiles);
 }
 
+void CminerDlg::CheckboxMD4TOP(wxCommandEvent & event)
+{
+    if (!threadcount)
+    {
+        p_writemd4hash = !p_writemd4hash;
+    }
+    else
+    {
+        Message(101, "");
+    }
+    checkbox_MD4TOP -> SetValue(p_writemd4hash);
+}
+
 void CminerDlg::CheckboxSELVID(wxCommandEvent & event)
 {
     if (!threadcount)
     {
-        p_selectvidfiles = checkbox_SELVID -> IsChecked();
-        if (p_selectvidfiles)
-        {
-            p_metfilesonly = false;
-            checkbox_MFO -> SetValue(p_metfilesonly);
-            p_partfilesonly = false;
-            checkbox_PFO -> SetValue(p_metfilesonly);
-        }
+        p_selectvidfiles = !p_selectvidfiles;
     }
     else
     {
-        checkbox_SELVID -> SetValue(p_selectvidfiles);
         Message(101, "");
     }
+    checkbox_SELVID -> SetValue(p_selectvidfiles);
 }
 
 void CminerDlg::CheckboxAHF(wxCommandEvent & event)
@@ -1687,7 +1813,46 @@ void CminerDlg::CheckboxAHF(wxCommandEvent & event)
     {
         Message(101, "");
     }
-        smPMmd4hashs -> Check(20401, p_addMD4tofnam);
+    smPMhocfiles -> Check(20401, p_addMD4tofnam);
+}
+
+void CminerDlg::CheckboxAHH(wxCommandEvent & event)
+{
+    if (!threadcount)
+    {
+        p_addMD4tohtml = !p_addMD4tohtml;
+    }
+    else
+    {
+        Message(101, "");
+    }
+    smPMhocfiles -> Check(20402, p_addMD4tohtml);
+}
+
+void CminerDlg::CheckboxDW3(wxCommandEvent & event)
+{
+    if (!threadcount)
+    {
+        p_delWD3files = !p_delWD3files;
+    }
+    else
+    {
+        Message(101, "");
+    }
+    smPMhocfiles -> Check(20403, p_delWD3files);
+}
+
+void CminerDlg::CheckboxDPY(wxCommandEvent & event)
+{
+    if (!threadcount)
+    {
+        p_delPRYfiles = !p_delPRYfiles;
+    }
+    else
+    {
+        Message(101, "");
+    }
+    smPMhocfiles -> Check(20404, p_delPRYfiles);
 }
 
 void CminerDlg::CheckboxFCK(wxCommandEvent & event)
@@ -1764,71 +1929,86 @@ void CminerDlg::CheckboxAPC(wxCommandEvent & event)
 
 void CminerDlg::AddingDir()
 {
-    sprintf((char *) buffer0, "%s/logfile.txt", DATABASEp);
-    logfileFP = fopen((char *) buffer0, "w");
-    //w+r
-    samplerand = rand() % 65536;
-    samplefilename = NULL;
-    samplesourcename = NULL;
-    sampledirname = NULL;
-    samplefilenamez = 0;
-    partfilecounter = 0;
-    name0deep = 0;
-    name0count = 0;
-    name0fcount = 0;
-    celdeep = 0;
-    count_dupremoved = 0;
-    count_dupmarked = 0;
-    count_duplogged = 0;
-    count_fakmarked = 0;
-    count_deleted = 0;
-    count_subdirsprocessed = 0;
-    count_filesprocessed = 0;
-    dbSM = new CDatabase(1, 16, DATABASEp, "dupli.DBIDX");
-    wxMutexGuiEnter();
-    switch (sprache)
+    mil = 0;
+    lmil = 0;
+    memset(matchdomain, 0, 65);
+    strcpy(matchdomain, tctrl_MATCHDOMAIN -> GetValue() .c_str());
+    lmd = strlen(matchdomain);
+    memset(matchurl, 0, 65);
+    strcpy(matchurl, tctrl_MATCHURL -> GetValue() .c_str());
+    lmu = strlen(matchurl);
+    dbPI = new CDatabase(1, 16, DATABASEp, "pics.DBIDX");
+    if (dbPI)
     {
-    case 0:
-        textctrl_ARC -> AppendText("Quelle: ");
-        textctrl_ARC -> AppendText(theApp -> sourcedirectory.c_str());
-        textctrl_ARC -> AppendText("\n");
-        sprintf(buffer, "%s/dupli.DBIDX", DATABASEp);
-        textctrl_ARC -> AppendText(_T("Datenbank: "));
-        textctrl_ARC -> AppendText(_T(buffer));
-        textctrl_ARC -> AppendText("\n");
-        break;
-    case 1:
-        textctrl_ARC -> AppendText("Source: ");
-        textctrl_ARC -> AppendText(theApp -> sourcedirectory.c_str());
-        textctrl_ARC -> AppendText("\n");
-        sprintf(buffer, "%s/dupli.DBIDX", DATABASEp);
-        textctrl_ARC -> AppendText(_T("Database: "));
-        textctrl_ARC -> AppendText(_T(buffer));
-        textctrl_ARC -> AppendText("\n");
-        break;
-    }
-    if (p_logduples)
-    {
-        textctrl_ARC -> AppendText(_T("Logfile: "));
-        textctrl_ARC -> AppendText(_T(buffer0));
-        textctrl_ARC -> AppendText("\n");
-    }
-    Message(91, "");
-    wxMutexGuiLeave();
-    DIR * subdir[99];
-    struct dirent * direntry;
-    char * filename;
-    filename = new char[1024];
-    int filetype = 0;
-    char * filename3;
-    filename3 = new char[1024];
-    int deep = 0;
-    processcount = 0;
-    dbSMmData.ptr = (unsigned char *) databuffer;
-    sprintf(dirbuffer[0], "%s/", theApp -> sourcedirectory.c_str());
-    deep++;
-    subdir[deep] = opendir(dirbuffer[deep - 1]);
-    dbfilecount = 0;
+        dbTX = new CDatabase(1, 16, DATABASEp, "html.DBIDX");
+        if (dbTX)
+        {
+            sprintf((char *) buffer0, "%s/logfile.txt", DATABASEp);
+            logfileFP = fopen((char *) buffer0, "w");
+            //w+r
+            samplerand = rand() % 65536;
+            samplefilename = NULL;
+            samplesourcename = NULL;
+            sampledirname = NULL;
+            samplefilenamez = 0;
+            partfilecounter = 0;
+            name0deep = 0;
+            name0count = 0;
+            name0fcount = 0;
+            celdeep = 0;
+            count_dupremoved = 0;
+            count_dupmarked = 0;
+            count_duplogged = 0;
+            count_fakmarked = 0;
+            count_deleted = 0;
+            count_filesmoved = 0;
+            count_subdirsprocessed = 0;
+            count_filesprocessed = 0;
+            dbSM = new CDatabase(1, 16, DATABASEp, "dupli.DBIDX");
+            wxMutexGuiEnter();
+            switch (sprache)
+            {
+            case 0:
+                tctrl_ARC -> AppendText("Quelle: ");
+                tctrl_ARC -> AppendText(theApp -> sourcedirectory.c_str());
+                tctrl_ARC -> AppendText("\n");
+                sprintf(buffer, "%s/dupli.DBIDX", DATABASEp);
+                tctrl_ARC -> AppendText(_T("Datenbank: "));
+                tctrl_ARC -> AppendText(_T(buffer));
+                tctrl_ARC -> AppendText("\n");
+                break;
+            case 1:
+                tctrl_ARC -> AppendText("Source: ");
+                tctrl_ARC -> AppendText(theApp -> sourcedirectory.c_str());
+                tctrl_ARC -> AppendText("\n");
+                sprintf(buffer, "%s/dupli.DBIDX", DATABASEp);
+                tctrl_ARC -> AppendText(_T("Database: "));
+                tctrl_ARC -> AppendText(_T(buffer));
+                tctrl_ARC -> AppendText("\n");
+                break;
+            }
+            if (p_logduples)
+            {
+                tctrl_ARC -> AppendText(_T("Logfile: "));
+                tctrl_ARC -> AppendText(_T(buffer0));
+                tctrl_ARC -> AppendText("\n");
+            }
+            Message(91, "");
+            wxMutexGuiLeave();
+            DIR * subdir[99];
+            struct dirent * direntry;
+            char * filename;
+            filename = new char[1024];
+            int filetype = 0;
+            char * filename3;
+            filename3 = new char[1024];
+            int deep = 0;
+            processcount = 0;
+            dbSMmData.ptr = (unsigned char *) databuffer;
+            sprintf(dirbuffer[0], "%s/", theApp -> sourcedirectory.c_str());
+            deep++;
+            subdir[deep] = opendir(dirbuffer[deep - 1]);
+            dbfilecount = 0;
  /*
  fp1 = fopen("dupli.STATUS", "r");
  if (fp1)
@@ -1837,393 +2017,450 @@ void CminerDlg::AddingDir()
  fclose(fp1);
  }
     */
-    if (p_createsample)
-    {
-        sprintf(buffer, "%s/sample", theApp -> targetdirectory.c_str());
-        if (stat(buffer, statbuffer))
-        {
-            if (errno == ENOENT)
+            int l;
+            if (p_createsample)
             {
-                int l;
+                sprintf(buffer, "%s/sample", theApp -> targetdirectory.c_str());
+                if (stat(buffer, statbuffer))
+                {
+                    if (errno == ENOENT)
+                    {
 #ifdef __WIN32__
-                l = mkdir(buffer);
+                        l = mkdir(buffer);
 #else
-                l = mkdir(buffer, 777);
+                        l = mkdir(buffer, 777);
 #endif
+                    }
+                }
             }
-        }
-    }
-    do
-    {
-        if (subdir[deep])
-        {
             do
             {
-                direntry = readdir(subdir[deep]);
-                if (direntry)
+                if (subdir[deep])
                 {
-                    sprintf(filename, "%s", direntry -> d_name);
-                    sprintf(sourcename, "%s%s", dirbuffer[deep - 1], filename);
-                    if (!stat(sourcename, statbuffer))
+                    do
                     {
-                        if (statbuffer -> st_mode & 0040000)
+                        direntry = readdir(subdir[deep]);
+                        if (direntry)
                         {
-                            //directory
-                            if (!strcmp(filename, "."))
+                            sprintf(filename, "%s", direntry -> d_name);
+                            sprintf(sourcename, "%s%s", dirbuffer[deep - 1], filename);
+                            if (!stat(sourcename, statbuffer))
                             {
-                                sprintf(dirbuffer[deep], "%s%s/", dirbuffer[deep - 1], filename);
-                                filetype = - 1;
-                            }
-                            else if(!strcmp(filename, ".."))
-                            {
-                                sprintf(dirbuffer[deep], "%s%s/", dirbuffer[deep - 1], filename);
-                                filetype = - 2;
-                            }
-                            else
-                            {
-                                sprintf(dirbuffer[deep], "%s%s/", dirbuffer[deep - 1], filename);
-                                filetype = 0;
-                                if (!name0deep)
+                                l = 1;
+                                if (deep == 1)
                                 {
-                                    int l;
-                                    l = strlen(filename);
-                                    if (l)
+                                    if (lmd)
                                     {
-                                        --l;
-                                        if (filename[l] == ')')
+                                        if (!strstr(sourcename, matchdomain))
                                         {
-                                            //specialdirfile
-                                            int status = 0, i;
-                                            unsigned int j;
-                                            i = l;
-                                            do
+                                            l = 0;
+                                        }
+                                        else
+                                        {
+                                            printf("matchbase: %s\n", sourcename);
+                                            getchar();
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    if (lmu)
+                                    {
+                                        if (!strstr(sourcename, matchurl))
+                                        {
+                                            l = 0;
+                                        }
+                                        else
+                                        {
+                                            printf("matchall: %s\n", sourcename);
+                                        }
+                                    }
+                                }
+                                if (l)
+                                {
+                                    if (statbuffer -> st_mode & 0040000)
+                                    {
+                                        //directory
+                                        if (!strcmp(filename, "."))
+                                        {
+                                            sprintf(dirbuffer[deep], "%s%s/", dirbuffer[deep - 1], filename);
+                                            filetype = - 1;
+                                        }
+                                        else if(!strcmp(filename, ".."))
+                                        {
+                                            sprintf(dirbuffer[deep], "%s%s/", dirbuffer[deep - 1], filename);
+                                            filetype = - 2;
+                                        }
+                                        else
+                                        {
+                                            sprintf(dirbuffer[deep], "%s%s/", dirbuffer[deep - 1], filename);
+                                            filetype = 0;
+                                            if (!name0deep)
                                             {
-                                                i--;
-                                                if (filename[i] == '(')
+                                                l = strlen(filename);
+                                                if (l)
                                                 {
-                                                    switch (status)
+                                                    --l;
+                                                    if (filename[l] == ')')
                                                     {
-                                                    case 0:
-                                                        delete[] name0type;
-                                                        name0type = new char[l - i];
-                                                        name0type[l - i - 1] = 0;
-                                                        strncpy(name0type, filename + i + 1, l - i - 1);
-                                                        if (i)
+                                                        //specialdirfile
+                                                        int status = 0, i;
+                                                        unsigned int j;
+                                                        i = l;
+                                                        do
                                                         {
-                                                            strncpy(name0, filename, i);
+                                                            i--;
+                                                            if (filename[i] == '(')
+                                                            {
+                                                                switch (status)
+                                                                {
+                                                                case 0:
+                                                                    delete[] name0type;
+                                                                    name0type = new char[l - i];
+                                                                    name0type[l - i - 1] = 0;
+                                                                    strncpy(name0type, filename + i + 1, l - i - 1);
+                                                                    if (i)
+                                                                    {
+                                                                        strncpy(name0, filename, i);
+                                                                    }
+                                                                    name0[i] = 0;
+                                                                    j = 0;
+                                                                    while (j < strlen(name0type))
+                                                                    {
+                                                                        if (name0type[j] == ',')
+                                                                        {
+                                                                            name0type[j] = 0;
+                                                                            j += 1000;
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            j++;
+                                                                        }
+                                                                    }
+                                                                    i = - i;
+                                                                    status++;
+                                                                    break;
+                                                                default:
+                                                                    break;
+                                                                }
+                                                            }
                                                         }
-                                                        name0[i] = 0;
-                                                        j = 0;
-                                                        while (j < strlen(name0type))
+                                                        while (i > 0);
+                                                        if (strlen(name0type))
                                                         {
-                                                            if (name0type[j] == ',')
+                                                            if (!strlen(name0))
                                                             {
-                                                                name0type[j] = 0;
-                                                                j += 1000;
+                                                                celdeep = deep;
                                                             }
-                                                            else
+                                                            else if(!name0deep)
                                                             {
-                                                                j++;
+                                                                name0count = 0;
+                                                                name0fcount = 0;
+                                                                name0deep = deep;
+                                                                if (p_createsample)
+                                                                {
+                                                                    if (sampledirname)
+                                                                    {
+                                                                        delete [] sampledirname;
+                                                                    }
+                                                                    sampledirname = new char[strlen(name0) + 1];
+                                                                    strcpy(sampledirname, name0);
+                                                                }
                                                             }
                                                         }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        hash -> hashtableindex = 0;
+                                        filetype = GetFiletype(filename);
+                                    }
+                                    if (filetype > 0)
+                                    {
+                                        if (p_metfilesonly)
+                                        {
+                                            switch (filetype)
+                                            {
+                                            case 8:
+                                            case 9:
+                                            case 91:
+                                                break;
+                                            default:
+                                                filetype = - 9;
+                                                break;
+                                            }
+                                        }
+                                        if (p_partfilesonly)
+                                        {
+                                            switch (filetype)
+                                            {
+                                            case 8:
+                                            case 91:
+                                                break;
+                                            default:
+                                                filetype = - 8;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (filetype >= 0)
+                                    {
+                                        timet0 = time(NULL);
+                                        filesize = statbuffer -> st_size;
+                                        switch (filetype)
+                                        {
+                                        case 0:
+                                            count_subdirsprocessed++;
+                                            deep++;
+                                            subdir[deep] = opendir(dirbuffer[deep - 1]);
+                                            if (!subdir[deep])
+                                            {
+                                                deep--;
+                                            }
+                                            break;
+                                        case 1:
+                                            count_filesprocessed++;
+                                            if (!p_removedupext)
+                                            {
+                                                Process_Normalfile(dirbuffer[deep - 1], filename);
+                                            }
+                                            break;
+                                            break;
+                                        case 4:
+                                            count_filesprocessed++;
+                                            if (!p_removedupext)
+                                            {
+                                                switch (txttype)
+                                                {
+                                                case 1:
+                                                    Process_HTMfile(dirbuffer[deep - 1], filename);
+                                                    break;
+                                                case 101:
+                                                    Process_PRYfile(dirbuffer[deep - 1], filename);
+                                                    break;
+                                                default:
+                                                    Process_Normalfile(dirbuffer[deep - 1], filename);
+                                                    break;
+                                                }
+                                            }
+                                            break;
+                                        case 5:
+                                            count_filesprocessed++;
+                                            if (!p_removedupext)
+                                            {
+                                                Process_WD3file(dirbuffer[deep - 1], filename);
+                                            }
+                                            break;
+                                        case 6:
+                                            //picfiles
+                                            count_filesprocessed++;
+                                            if (!p_removedupext)
+                                            {
+                                                Process_Normalfile(dirbuffer[deep - 1], filename);
+                                            }
+                                            break;
+                                        case 7:
+                                            count_filesprocessed++;
+                                            if (!p_removedupext)
+                                            {
+                                                switch (pictype)
+                                                {
+                                                case 1:
+                                                    if (p_selectpicfiles)
+                                                    {
+                                                        Process_Picturefile(dirbuffer[deep - 1], filename);
+                                                    }
+                                                    else
+                                                    {
+                                                        Process_Normalfile(dirbuffer[deep - 1], filename);
+                                                    }
+                                                    break;
+                                                default:
+                                                    Process_Normalfile(dirbuffer[deep - 1], filename);
+                                                    break;
+                                                }
+                                            }
+                                            break;
+                                        case 8:
+                                            //.part-files
+                                            if (p_partfilesonly)
+                                            {
+                                                if (!p_removedupext)
+                                                {
+                                                    count_filesprocessed++;
+                                                    Process_Normalfile(dirbuffer[deep - 1], filename);
+                                                }
+                                            }
+                                            break;
+                                        case 9:
+                                            //.met-files
+                                            if (p_metfilesonly)
+                                            {
+                                                count_filesprocessed++;
+                                                Process_Metfile(dirbuffer[deep - 1], filename);
+                                            }
+                                            break;
+                                            //dup-files:
+                                        case 91:
+                                            if (p_removedupext)
+                                            {
+                                                count_dupremoved++;
+                                                int i;
+                                                strcpy(filename3, sourcename);
+                                                i = strlen(filename3);
+                                                while (i > 0)
+                                                {
+                                                    if (filename3[--i] == '.')
+                                                    {
+                                                        filename3[i] = 0;
                                                         i = - i;
-                                                        status++;
-                                                        break;
-                                                    default:
-                                                        break;
                                                     }
                                                 }
-                                            }
-                                            while (i > 0);
-                                            if (strlen(name0type))
-                                            {
-                                                if (!strlen(name0))
+                                                if (strcmp(filename3, sourcename))
                                                 {
-                                                    celdeep = deep;
-                                                }
-                                                else if(!name0deep)
-                                                {
-                                                    name0count = 0;
-                                                    name0fcount = 0;
-                                                    name0deep = deep;
-                                                    if (p_createsample)
-                                                    {
-                                                        if (sampledirname)
-                                                        {
-                                                            delete [] sampledirname;
-                                                        }
-                                                        sampledirname = new char[strlen(name0) + 1];
-                                                        strcpy(sampledirname, name0);
-                                                    }
+                                                    (void) rename(sourcename, filename3);
                                                 }
                                             }
+                                            break;
+                                        case 92:
+                                            //.bak-files
+                                            break;
+                                        case 93:
+                                            //.ism-files(infofiles)
+                                            break;
+                                        default:
+                                            break;
                                         }
                                     }
                                 }
                             }
                         }
-                        else
+                        if (minerdlgThread -> TD())
                         {
-                            hash -> hashtableindex = 0;
-                            filetype = GetFiletype(filename);
-                        }
-                        if (filetype > 0)
-                        {
-                            if (p_selectvidfiles)
-                            {
-                                switch (filetype)
-                                {
-                                case 6:
-                                case 7:
-                                case 8:
-                                case 9:
-                                case 91:
-                                    break;
-                                default:
-                                    filetype = - 6;
-                                    break;
-                                }
-                            }
-                            if (p_selectpicfiles)
-                            {
-                                switch (filetype)
-                                {
-                                case 6:
-                                case 7:
-                                case 8:
-                                case 9:
-                                case 91:
-                                    break;
-                                default:
-                                    filetype = - 7;
-                                    break;
-                                }
-                            }
-                            if (p_metfilesonly)
-                            {
-                                switch (filetype)
-                                {
-                                case 8:
-                                case 9:
-                                case 91:
-                                    break;
-                                default:
-                                    filetype = - 9;
-                                    break;
-                                }
-                            }
-                            if (p_partfilesonly)
-                            {
-                                switch (filetype)
-                                {
-                                case 8:
-                                    break;
-                                default:
-                                    filetype = - 8;
-                                    break;
-                                }
-                            }
-                        }
-                        if (filetype >= 0)
-                        {
-                            timet0 = time(NULL);
-                            filesize = statbuffer -> st_size;
-                            switch (filetype)
-                            {
-                            case 0:
-                                count_subdirsprocessed++;
-                                deep++;
-                                subdir[deep] = opendir(dirbuffer[deep - 1]);
-                                if (!subdir[deep])
-                                {
-                                    deep--;
-                                }
-                                break;
-                            case 1:
-                            case 6:
-                            case 7:
-                                count_filesprocessed++;
-                                if (!p_removedupext)
-                                {
-                                    Process_Normalfile(dirbuffer[deep - 1], filename);
-                                }
-                                break;
-                            case 8:
-                                //.part-files
-                                if (p_partfilesonly)
-                                {
-                                    if (!p_removedupext)
-                                    {
-                                        count_filesprocessed++;
-                                        Process_Normalfile(dirbuffer[deep - 1], filename);
-                                    }
-                                }
-                                break;
-                            case 9:
-                                //.met-files
-                                if (p_metfilesonly)
-                                {
-                                    count_filesprocessed++;
-                                    Process_Metfile(dirbuffer[deep - 1], filename);
-                                }
-                                break;
-                                //dup-files:
-                            case 91:
-                                if (p_removedupext)
-                                {
-                                    count_dupremoved++;
-                                    int i;
-                                    strcpy(filename3, sourcename);
-                                    i = strlen(filename3);
-                                    while (i > 0)
-                                    {
-                                        if (filename3[--i] == '.')
-                                        {
-                                            filename3[i] = 0;
-                                            i = - i;
-                                        }
-                                    }
-                                    if (strcmp(filename3, sourcename))
-                                    {
-                                        (void) rename(sourcename, filename3);
-                                    }
-                                }
-                                break;
-                            case 92:
-                                //.bak-files
-                                break;
-                            case 93:
-                                //.ism-files(infofiles)
-                                break;
-                            default:
-                                break;
-                            }
+                            direntry = NULL;
+                            deep = - 1;
                         }
                     }
-                }
-                if (minerdlgThread -> TD())
-                {
-                    direntry = NULL;
-                    deep = - 1;
-                }
-            }
-            while (direntry);
-            closedir(subdir[deep--]);
-            if (deep >= 0)
-            {
-                if (celdeep == deep)
-                {
-                    celdeep = 0;
-                }
-                if (name0deep == deep)
-                {
-                    if (samplefilename)
+                    while (direntry);
+                    closedir(subdir[deep--]);
+                    if (deep >= 0)
                     {
-                        if (samplesourcename)
+                        if (celdeep == deep)
                         {
-                            if (p_nosubfolders)
+                            celdeep = 0;
+                        }
+                        if (name0deep == deep)
+                        {
+                            if (samplefilename)
                             {
-                                sprintf(buffer, "%s/sample", theApp -> targetdirectory.c_str());
-                            }
-                            else
-                            {
-                                sprintf(buffer, "%s/sample/%s", theApp -> targetdirectory.c_str(), name0);
-                            }
-                            if (p_foldersonly)
-                            {
-                                sprintf(buffer + strlen(buffer), "(%s)", name0type);
-                                if (stat(buffer, statbuffer))
+                                if (samplesourcename)
                                 {
-                                    if (errno == ENOENT)
+                                    if (p_nosubfolders)
                                     {
-                                        int l;
+                                        sprintf(buffer, "%s/sample", theApp -> targetdirectory.c_str());
+                                    }
+                                    else
+                                    {
+                                        sprintf(buffer, "%s/sample/%s", theApp -> targetdirectory.c_str(), name0);
+                                    }
+                                    if (p_foldersonly)
+                                    {
+                                        sprintf(buffer + strlen(buffer), "(%s)", name0type);
+                                        if (stat(buffer, statbuffer))
+                                        {
+                                            if (errno == ENOENT)
+                                            {
+                                                int l;
 #ifdef __WIN32__
-                                        l = mkdir(buffer);
+                                                l = mkdir(buffer);
 #else
-                                        l = mkdir(buffer, 777);
+                                                l = mkdir(buffer, 777);
 #endif
-                                    }
-                                }
-                            }
-                            else
-                            {
-    /* filecopy:*/
-                                FILE * fps, * fpt;
-                                fps = fopen(samplesourcename, "r");
-                                if (fps)
-                                {
-                                    sprintf(buffer + strlen(buffer), "/%s", samplefilename);
-                                    fpt = fopen(buffer, "w+r");
-                                    if (fpt)
-                                    {
-                                        long bytes = 0, bytet = 0;
-                                        while ((!feof(fps)) && (bytet == bytes))
-                                        {
-                                            bytes = fread(buffer0, 1, BUFFERSIZE, fps);
-                                            if (bytes)
-                                            {
-                                                bytet = fwrite(buffer0, 1, bytes, fpt);
                                             }
                                         }
-                                        fclose(fpt);
                                     }
-                                    fclose(fps);
-                                }
-                            }
+                                    else
+                                    {
+    /* filecopy:*/
+                                        FILE * fps, * fpt;
+                                        fps = fopen(samplesourcename, "r");
+                                        if (fps)
+                                        {
+                                            sprintf(buffer + strlen(buffer), "/%s", samplefilename);
+                                            fpt = fopen(buffer, "w+r");
+                                            if (fpt)
+                                            {
+                                                long bytes = 0, bytet = 0;
+                                                while ((!feof(fps)) && (bytet == bytes))
+                                                {
+                                                    bytes = fread(buffer0, 1, BUFFERSIZE, fps);
+                                                    if (bytes)
+                                                    {
+                                                        bytet = fwrite(buffer0, 1, bytes, fpt);
+                                                    }
+                                                }
+                                                fclose(fpt);
+                                            }
+                                            fclose(fps);
+                                        }
+                                    }
     /* filecopy_end*/
-                            delete[] samplesourcename;
-                            samplesourcename = NULL;
-                        }
-                        delete[] samplefilename;
-                        samplefilename = NULL;
-                    }
-                    if (sampledirname)
-                    {
-                        delete[] sampledirname;
-                        sampledirname = NULL;
-                        samplefilenamez = 0;
-                    }
-                    if (name0deep)
-                    {
-                        if (p_addPICCtodir)
-                        {
-                            sprintf(sourcename, "%s", dirbuffer[deep]);
-                            if (strlen(sourcename) > 1)
-                            {
-                                sourcename[strlen(sourcename) - 1] = 0;
+                                    delete[] samplesourcename;
+                                    samplesourcename = NULL;
+                                }
+                                delete[] samplefilename;
+                                samplefilename = NULL;
                             }
-                            if (name0fcount != 1)
+                            if (sampledirname)
                             {
-                                sprintf(tempname, "%s%s(%s,%dpics)", dirbuffer[deep - 1], name0, name0type, name0fcount);
+                                delete[] sampledirname;
+                                sampledirname = NULL;
+                                samplefilenamez = 0;
                             }
-                            else
+                            if (name0deep)
                             {
-                                sprintf(tempname, "%s%s(%s,%dpic)", dirbuffer[deep - 1], name0, name0type, name0fcount);
-                            }
-                            if (strlen(tempname))
-                            {
-                                if (rename(sourcename, tempname))
+                                if (p_addPICCtodir)
                                 {
-                                    printf("rename-error:\n");
-                                    printf("tn: %s\n", tempname);
-                                    printf("tn: %s\n", tempname);
+                                    sprintf(sourcename, "%s", dirbuffer[deep]);
+                                    if (strlen(sourcename) > 1)
+                                    {
+                                        sourcename[strlen(sourcename) - 1] = 0;
+                                    }
+                                    if (name0fcount != 1)
+                                    {
+                                        sprintf(tempname, "%s%s(%s,%dpics)", dirbuffer[deep - 1], name0, name0type, name0fcount);
+                                    }
+                                    else
+                                    {
+                                        sprintf(tempname, "%s%s(%s,%dpic)", dirbuffer[deep - 1], name0, name0type, name0fcount);
+                                    }
+                                    if (strlen(tempname))
+                                    {
+                                        if (rename(sourcename, tempname))
+                                        {
+                                            printf("rename-error:\n");
+                                            printf("tn: %s\n", tempname);
+                                            printf("tn: %s\n", tempname);
+                                        }
+                                    }
                                 }
                             }
+                            name0deep = 0;
+                            name0fcount = 0;
                         }
                     }
-                    name0deep = 0;
-                    name0fcount = 0;
+                }
+                else
+                {
+                    deep--;
                 }
             }
-        }
-        else
-        {
-            deep--;
-        }
-    }
-    while (deep > 0);
-    delete[] filename;
-    delete[] filename3;
+            while (deep > 0);
+            delete[] filename;
+            delete[] filename3;
  /*
  fp1 = fopen("dupli.STATUS", "w+r");
  if (fp1)
@@ -2232,49 +2469,127 @@ void CminerDlg::AddingDir()
  fclose(fp1);
  }
     */
-    wxMutexGuiEnter();
-    if (deep < 0)
-    {
-        deep = 0;
+            wxMutexGuiEnter();
+            tctrl_ARC -> Clear();
+            if (deep < 0)
+            {
+                deep = 0;
+            }
+            else
+            {
+                Message(92, "");
+            }
+            switch (sprache)
+            {
+            case 0:
+                sprintf(buffer,
+                " Unterverzeichnisse=%lu Dateien=%lu Markiert(.dup)=%lu Demarkiert=%lu Geloescht=%lu Verschoben=%lu\n",
+                count_subdirsprocessed, count_filesprocessed, count_dupmarked, count_dupremoved, count_deleted, count_filesmoved);
+                break;
+            case 1:
+                sprintf(buffer,
+                " Subdirs=%lu Files=%lu DUPmarked=%lu DUPremoved=%lu Deleted=%lu Moved=%lu\n",
+                count_subdirsprocessed, count_filesprocessed, count_dupmarked, count_dupremoved, count_deleted, count_filesmoved);
+                break;
+            }
+            tctrl_ARC -> AppendText(buffer);
+            wxMutexGuiLeave();
+            if (samplefilename)
+            {
+                delete [] samplefilename;
+                samplefilename = NULL;
+            }
+            if (samplesourcename)
+            {
+                delete [] samplesourcename;
+                samplesourcename = NULL;
+            }
+            if (sampledirname)
+            {
+                delete [] sampledirname;
+                sampledirname = NULL;
+            }
+            delete dbSM;
+            dbSMmData.ptr = NULL;
+            dbSMmData.size = 0;
+            fclose(logfileFP);
+        }
     }
-    else
+    delete dbPI;
+    dbPI = NULL;
+    delete dbTX;
+    dbTX = NULL;
+}
+
+void CminerDlg::Process_WD3file(char * filepath, char * filename)
+{
+    if (p_delWD3files)
     {
-        Message(92, "");
+        (void) unlink(sourcename);
     }
-    switch (sprache)
+}
+
+void CminerDlg::Process_PRYfile(char * filepath, char * filename)
+{
+    if (p_delPRYfiles)
     {
-    case 0:
-        sprintf(buffer,
-        " Unterverzeichnisse=%lu Dateien=%lu Markiert(.dup)=%lu Demarkiert=%lu Geloescht=%lu\n",
-        count_subdirsprocessed, count_filesprocessed, count_dupmarked, count_dupremoved, count_deleted);
-        break;
-    case 1:
-        sprintf(buffer,
-        " Subdirs=%lu Files=%lu DUPmarked=%lu DUPremoved=%lu Deleted=%lu\n",
-        count_subdirsprocessed, count_filesprocessed, count_dupmarked, count_dupremoved, count_deleted);
-        break;
+        (void) unlink(sourcename);
     }
-    textctrl_ARC -> AppendText(buffer);
-    wxMutexGuiLeave();
-    if (samplefilename)
+}
+
+void CminerDlg::Process_HTMfile(char * filepath, char * filename)
+{
+    if (p_addMD4tohtml)
     {
-        delete [] samplefilename;
-        samplefilename = NULL;
+        int i;
+        char hash1[33];
+        memset(hash1, 0, 33);
+        memset(tempname, 0, BUFFERSIZE);
+        hash -> hashFile(sourcename, false);
+        for (i = 0 ; i < 16 ; i++)
+        {
+            sprintf(hash1 + i * 2, "%02x", ((unsigned char *) hash -> blockhash) [i]);
+        }
+        i = strlen(sourcename);
+        while (i > 0)
+        {
+            if (sourcename[i] == '.')
+            {
+                i = - i;
+            }
+            else
+            {
+                i--;
+            }
+        }
+        if (i < 0)
+        {
+            i = - i;
+            if (i > 32)
+            {
+                if (!strncmp(sourcename + i - 32, hash1, 32))
+                {
+                    i = 0;
+                }
+            }
+            if (i)
+            {
+                strncpy(tempname, sourcename, i);
+                sprintf(tempname + strlen(tempname), ".%s%s", hash1, sourcename + i);
+                if (!stat(tempname, statbuffer))
+                {
+                    (void) unlink(tempname);
+                }
+                (void) rename(sourcename, tempname);
+                printf("htm: %s\n", tempname);
+            }
+        }
     }
-    if (samplesourcename)
-    {
-        delete [] samplesourcename;
-        samplesourcename = NULL;
-    }
-    if (sampledirname)
-    {
-        delete [] sampledirname;
-        sampledirname = NULL;
-    }
-    delete dbSM;
-    dbSMmData.ptr = NULL;
-    dbSMmData.size = 0;
-    fclose(logfileFP);
+}
+
+void CminerDlg::Process_Picturefile(char * filepath, char * filename)
+{
+    LoadPicture(filepath, filename);
 }
 
 void CminerDlg::Process_Normalfile(char * filepath, char * filename)
@@ -2324,6 +2639,7 @@ void CminerDlg::Process_Normalfile(char * filepath, char * filename)
                             switch (ftype)
                             {
                             case 1:
+                                //picfile
                                 sprintf(buffer, "%s.%08d.jpg", name0, name0count);
                                 sprintf(tempname, "%s%s", filepath2, buffer);
                                 break;
@@ -2460,7 +2776,7 @@ void CminerDlg::Process_Normalfile(char * filepath, char * filename)
             }
         }
  /*
- Rename(sourcename, true);
+ RenameNF(sourcename, true);
  for (i = 0 ; i < 16 ; i++)
  {
  sprintf(keybuffer + i * 2, "%02x", ((unsigned char *) hash -> blockhash) [i]);
@@ -2495,7 +2811,7 @@ void CminerDlg::Process_Normalfile(char * filepath, char * filename)
         if (CheckDatabase(keybuffer, databuffer, true))
         {
             //hashkey existiert
-            Rename(sourcename, false);
+            RenameNF(sourcename, false);
             free(dbSMmResult.ptr);
             dbSMmResult.ptr = NULL;
         }
@@ -2640,10 +2956,10 @@ void CminerDlg::Process_Normalfile(char * filepath, char * filename)
     if ((processcount% 20) == 19)
     {
         wxMutexGuiEnter();
-        textctrl_ARC -> AppendText(".");
+        tctrl_ARC -> AppendText(".");
         if ((processcount% 4000) == 3999)
         {
-            textctrl_ARC -> AppendText("\n");
+            tctrl_ARC -> AppendText("\n");
         }
         wxMutexGuiLeave();
     }
@@ -2676,21 +2992,21 @@ void CminerDlg::Process_Metfile(char * filepath, char * filename)
             {
                 wxMutexGuiEnter();
                 sprintf(buffer, "\nDuplikate %lu: ", count_filesprocessed);
-                textctrl_ARC -> AppendText(buffer);
-                //textctrl_ARC -> AppendText(filepath);
-                textctrl_ARC -> AppendText(filename);
-                //textctrl_ARC -> AppendText(mfile->mf_partfile);
-                textctrl_ARC -> AppendText(" >> ");
-                textctrl_ARC -> AppendText(mfile -> mf_filename);
+                tctrl_ARC -> AppendText(buffer);
+                //tctrl_ARC -> AppendText(filepath);
+                tctrl_ARC -> AppendText(filename);
+                //tctrl_ARC -> AppendText(mfile->mf_partfile);
+                tctrl_ARC -> AppendText(" >> ");
+                tctrl_ARC -> AppendText(mfile -> mf_filename);
                 sprintf(buffer, " %lu Bytes ", mfile -> mf_filesize);
-                textctrl_ARC -> AppendText(buffer);
-                textctrl_ARC -> AppendText(keybuffer);
-                textctrl_ARC -> AppendText("\n");
+                tctrl_ARC -> AppendText(buffer);
+                tctrl_ARC -> AppendText(keybuffer);
+                tctrl_ARC -> AppendText("\n");
                 wxMutexGuiLeave();
             }
             if (p_logduples || p_markupduples)
             {
-                Rename(sourcename, false);
+                RenameNF(sourcename, false);
             }
             strcpy(tempname, sourcename);
             sprintf(tempname + strlen(tempname) - 4, "(%lu)%s.dup.ism", mfile -> mf_filesize, mfile -> mf_filename);
@@ -2783,7 +3099,7 @@ void CminerDlg::Process_Metfile(char * filepath, char * filename)
 int CminerDlg::GetFiletype(char * filename)
 {
     int filetype = 1;
-    int l = strlen(filename);
+    int l1, l = strlen(filename);
     while (l > 0)
     {
         l--;
@@ -2798,6 +3114,29 @@ int CminerDlg::GetFiletype(char * filename)
         }
     }
     l = - l;
+    l1 = l;
+    while (l1 > 0)
+    {
+        switch (filename[l1])
+        {
+        case '@':
+        case '?':
+            l1 = - l1;
+            break;
+        default:
+            l1--;
+            break;
+        }
+    }
+    if (l1 < 0)
+    {
+        l1 = - l1;
+    }
+    else
+    {
+        l1 = l + 1;
+    }
+    l = l1 - 1;
     while (l > 0)
     {
         if (filename[l] == '.')
@@ -2811,9 +3150,10 @@ int CminerDlg::GetFiletype(char * filename)
     }
     l = - l;
     ftype = 0;
-    if ((strlen(filename) - l) < 15)
+    memset(fileextension, 0, 20);
+    if ((l1 - l) < 15)
     {
-        strcpy(fileextension, filename + l);
+        strncpy(fileextension, filename + l, l1 - l);
     }
     else
     {
@@ -2831,40 +3171,57 @@ int CminerDlg::GetFiletype(char * filename)
     {
         filetype = 93;
     }
+    else if(!strncasecmp(fileextension, ".wd3", 4))
+    {
+        filetype = 5;
+    }
+    pictype = 0;
     if (filetype == 1)
     {
         if (!strncasecmp(fileextension, ".png", 4))
         {
             filetype = 7;
             ftype = 2;
+            pictype = 2;
         }
         else if(!strncasecmp(fileextension, ".tif", 4))
         {
             filetype = 7;
+            pictype = 12;
+        }
+        else if(!strncasecmp(fileextension, ".pcx", 4))
+        {
+            filetype = 7;
+            pictype = 13;
         }
         else if(!strncasecmp(fileextension, ".bmp", 4))
         {
             filetype = 7;
+            pictype = 11;
         }
         else if(!strncasecmp(fileextension, ".gif", 4))
         {
             filetype = 7;
             ftype = 3;
+            pictype = 3;
         }
         else if(!strncasecmp(fileextension, ".jpe", 4))
         {
             ftype = 1;
             filetype = 7;
+            pictype = 1;
         }
         else if(!strncasecmp(fileextension, ".jpg", 4))
         {
             ftype = 1;
             filetype = 7;
+            pictype = 1;
         }
         else if(!strncasecmp(fileextension, ".jpeg", 5))
         {
             ftype = 1;
             filetype = 7;
+            pictype = 1;
         }
     }
     if (filetype == 1)
@@ -2899,6 +3256,45 @@ int CminerDlg::GetFiletype(char * filename)
         else if(!strncmp(fileextension, ".met", 4))
         {
             filetype = 9;
+        }
+    }
+    txttype = 0;
+    if (filetype == 1)
+    {
+        if (!strncmp(fileextension, ".htm", 4))
+        {
+            filetype = 4;
+            txttype = 1;
+        }
+        else if(!strncmp(fileextension, ".php", 4))
+        {
+            filetype = 4;
+            txttype = 2;
+        }
+        else if(!strncmp(fileextension, ".asp", 4))
+        {
+            filetype = 4;
+            txttype = 3;
+        }
+        else if(!strncmp(fileextension, ".cfm", 4))
+        {
+            filetype = 4;
+            txttype = 4;
+        }
+        else if(!strncmp(fileextension, ".cgi", 4))
+        {
+            filetype = 4;
+            txttype = 5;
+        }
+        else if(!strncmp(fileextension, ".txt", 4))
+        {
+            filetype = 4;
+            txttype = 9;
+        }
+        else if(!strncmp(fileextension, ".primary", 8))
+        {
+            filetype = 4;
+            txttype = 101;
         }
     }
     return filetype;
@@ -3019,10 +3415,37 @@ void CminerDlg::AddHashToSourcename(char * sourcename, bool toadd)
     }
 }
 
-void CminerDlg::Rename(char * sourcename, bool fakeorduple)
+void CminerDlg::HashAndRename(char * sn, char * ext, bool tohash)
+{
+    char tmp[1025];
+        strcpy(tmp, sn);
+    if (tohash)
+    {
+        char hash0[33];
+        int i;
+        hash -> hashFile(sn, false);
+        memset(hash0, 0, 33);
+        for (i = 0 ; i < 16 ; i++)
+        {
+            sprintf(hash0 + i * 2, "%02x", ((unsigned char *) hash -> blockhash) [i]);
+        }
+        sprintf(tmp + strlen(tmp), ".%s.%s", hash0, ext);
+    }
+    else
+    {
+        sprintf(tmp + strlen(tmp), ".%s", ext);
+    }
+    if (!stat(tmp, statbuffer))
+    {
+        (void) unlink(tmp);
+    }
+    (void) rename(sn, tmp);
+    //printf("%s: %s\n", ext,tmp);
+}
+
+void CminerDlg::RenameNF(char * sourcename, bool fakeorduple)
 {
     bool itemfoundpointer = false;
-    char tempname[4 + strlen(sourcename) ];
     int dbl, mrl;
     dbl = strlen(databuffer);
     mrl = strlen((char *) dbSMmResult.ptr);
@@ -3087,10 +3510,8 @@ void CminerDlg::Rename(char * sourcename, bool fakeorduple)
     {
         if (!itemfoundpointer)
         {
-            strcpy(tempname, sourcename);
-            strcpy(tempname + strlen(tempname), ".fak");
             count_fakmarked++;
-            (void) rename(sourcename, tempname);
+            HashAndRename(sourcename, "fak", false);
         }
     }
     else
@@ -3106,10 +3527,8 @@ void CminerDlg::Rename(char * sourcename, bool fakeorduple)
             }
             if (p_markupduples)
             {
-                strcpy(tempname, sourcename);
-                strcpy(tempname + strlen(tempname), ".dup");
                 count_dupmarked++;
-                (void) rename(sourcename, tempname);
+                HashAndRename(sourcename, "dup", false);
             }
             else if(p_deleteduples)
             {
@@ -3348,7 +3767,7 @@ void CminerDlg::CreateInfofileMET(char * infofilename, char * filepath, char * f
 
 void CminerDlg::W(const char * text)
 {
-    textctrl_ARC -> AppendText(text);
+    tctrl_ARC -> AppendText(text);
 }
 
 void CminerDlg::CreateThread()
@@ -3448,5 +3867,359 @@ int CminerDlg::filecountTST(char * filename)
     }
     while ((!retcode) && (p < l));
     return retcode;
+}
+
+void CminerDlg::LoadPicture(char * filepath, char * filename)
+{
+    int l1, l2, psize;
+    unsigned char * picbuf;
+    int img_width, img_height;
+    int asciiPointer;
+    char hash1[33], hash2[33];
+    l1 = strlen(filepath);
+    l2 = strlen(filename);
+    if ((l1 + l2) < 1025)
+    {
+        sprintf(buffer, "%s%s", filepath, filename);
+        if (!stat(buffer, statbuffer))
+        {
+            psize = statbuffer -> st_size;
+            if (psize > 32)
+            {
+                if (psize < 40960000)
+                {
+                    img_width = 0;
+                    img_height = 0;
+                    picbuf = (unsigned char *) malloc(psize + 1);
+                    wxFile * fpi = new wxFile(buffer, wxFile::read);
+                    if (fpi)
+                    {
+                        int bytes = 0, block = 0;
+                        if (fpi -> IsOpened())
+                        {
+                            do
+                            {
+                                block = psize - bytes;
+                                if (block > 1024)
+                                {
+                                    block = 1024;
+                                }
+                                bytes += fpi -> Read(picbuf + bytes, block);
+                            }
+                            while (!fpi -> Eof());
+                        }
+                        delete fpi;
+                        //printf("load(%d): %s\n", bytes, filename);
+                        int i = 0, l;
+                        int b, b_last = 0;
+                        int reading = 0;
+                        while (i < bytes)
+                        {
+                            l = 0;
+                            b = picbuf[i];
+                            switch (b)
+                            {
+                            case 0x00:
+                                if (!reading)
+                                {
+                                    b = b_last;
+                                }
+                                else
+                                {
+                                    reading = 1;
+                                }
+                                i++;
+                                break;
+                            case 0xff:
+                                if (reading)
+                                {
+                                    reading = 2;
+                                }
+                                i++;
+                                break;
+                            default:
+                                if (reading == 1)
+                                {
+                                    //printf("%02x ", b);
+                                    i++;
+                                }
+                                else
+                                {
+                                    reading = 0;
+                                    if (b_last == 0xff)
+                                    {
+                                        if ((i + 2) < bytes)
+                                        {
+                                            l = picbuf[i + 1] * 256 + picbuf[i + 2];
+                                        }
+                                        else
+                                        {
+                                            l = 0;
+                                        }
+                                        //printf("0xff %02x l=%d\n", b, l);
+                                        switch (b)
+                                        {
+                                        case 0xd0:
+                                        case 0xd1:
+                                        case 0xd2:
+                                        case 0xd3:
+                                        case 0xd4:
+                                        case 0xd5:
+                                        case 0xd6:
+                                        case 0xd7:
+                                            //RST0
+                                            l = 0;
+                                            break;
+                                        case 0xd8:
+                                            //SOI
+                                            l = 0;
+                                            break;
+                                        case 0xe0:
+                                            //app0
+ /*
+ printf("0xe0: l=%02x%02x fim=%02x%02x%02x%02x%02x "
+ , picbuf[i + 1], picbuf[i + 2], picbuf[i + 3], picbuf[i + 4], picbuf[i + 5], picbuf[i + 6], picbuf[i + 7]);
+ printf("mar=%02x mir=%02x den=%02x xden=%02x%02x yden=%02x%02x\n"
+ , picbuf[i + 8], picbuf[i + 9], picbuf[i + 10], picbuf[i + 11], picbuf[i + 12], picbuf[i + 13], picbuf[i + 14]);
+    */
+                                            break;
+                                        case 0xe1:
+                                        case 0xe2:
+                                        case 0xe3:
+                                        case 0xe4:
+                                        case 0xe5:
+                                        case 0xe6:
+                                        case 0xe7:
+                                        case 0xe8:
+                                        case 0xe9:
+                                        case 0xea:
+                                        case 0xeb:
+                                        case 0xec:
+                                        case 0xed:
+                                        case 0xee:
+                                        case 0xef:
+                                            break;
+                                        case 0xdb:
+                                            break;
+                                        case 0xdd:
+                                            break;
+                                        case 0xc0:
+                                            //SOF0
+ /*
+ printf("0xc0(SOF0): l=%02x%02x p=%02x h=%02x%02x w=%02x%02x\n"
+ , picbuf[i + 1], picbuf[i + 2], picbuf[i + 3], picbuf[i + 4]
+ , picbuf[i + 5], picbuf[i + 6], picbuf[i + 7]);
+    */
+                                            img_height = picbuf[i + 4] * 256 + picbuf[i + 5];
+                                            img_width = picbuf[i + 6] * 256 + picbuf[i + 7];
+                                            break;
+                                        case 0xc2:
+                                            //SOF2
+ /*
+ printf("0xc2(SOF2): l=%02x%02x p=%02x h=%02x%02x w=%02x%02x\n"
+ , picbuf[i + 1], picbuf[i + 2], picbuf[i + 3], picbuf[i + 4]
+ , picbuf[i + 5], picbuf[i + 6], picbuf[i + 7]);
+    */
+                                            img_height = picbuf[i + 4] * 256 + picbuf[i + 5];
+                                            img_width = picbuf[i + 6] * 256 + picbuf[i + 7];
+                                            break;
+                                        case 0xc4:
+                                            break;
+                                        case 0xda:
+                                            //start of scan
+                                            reading = 1;
+                                            break;
+                                        case 0xd9:
+                                            //EOI
+                                            l = 0;
+                                            bytes = - bytes;
+                                            break;
+                                        case 0xfe:
+                                            //COM
+                                            //kommentarblock
+                                            break;
+                                        default:
+ /*
+ printf("\n errorFF(%d)=%02x ", i, b);
+    */
+                                            break;
+                                        }
+                                        i += l;
+                                    }
+                                    else
+                                    {
+ /*
+ printf("\n errorXX(%d)=%02x ", i, b);
+ getchar();
+    */
+                                    }
+                                    i++;
+                                }
+                                break;
+                            }
+                            b_last = b;
+                        }
+                        asciiPointer = 0;
+                        if (!img_width)
+                        {
+                            i = 0;
+                            if (bytes < 0)
+                            {
+                                bytes = - bytes;
+                            }
+                            while (i < bytes)
+                            {
+                                b = picbuf[i++];
+                                if ((b >= 'a') && (b <= 'z'))
+                                {
+                                    asciiPointer++;
+                                }
+                                else if((b >= 'A') && (b <= 'Z'))
+                                {
+                                    asciiPointer++;
+                                }
+                                else if((b >= '0') && (b <= '9'))
+                                {
+                                    asciiPointer++;
+                                }
+                                else if(strchr("@ \\| ~§$&%`'!#*+_-/.,;:=><(){}?ßöäüÖÄÜ", b))
+                                {
+                                    asciiPointer++;
+                                }
+                                else
+                                {
+                                    switch (b)
+                                    {
+                                    case 9:
+                                    case 10:
+                                    case 13:
+                                    case 34:
+                                    case 0x92:
+                                        asciiPointer++;
+                                        break;
+                                    default:
+                                        printf("pic=%02x\n", b);
+                                        break;
+                                    }
+                                }
+                            }
+                            if (asciiPointer == bytes)
+                            {
+                                FILE * fpasc = fopen("proto_a.txt", "a+");
+                                (void) fprintf(fpasc, "jpg-asciifile(%d): %s\n"
+                                , bytes, sourcename);
+                                fclose(fpasc);
+                                HashAndRename(sourcename, "txt", true);
+                            }
+                            else
+                            {
+                                FILE * fpasc = fopen("proto_a.txt", "a+");
+                                (void) fprintf(fpasc, "jpg-asciis(%d<%d): %s\n"
+                                , asciiPointer, bytes, sourcename);
+                                fclose(fpasc);
+                            }
+                        }
+                        else if(bytes > 0)
+                        {
+                            FILE * fpasc = fopen("proto_defekte.txt", "a+");
+                            (void) fprintf(fpasc, "jpg-file(%d): %s\n"
+                            , bytes, sourcename);
+                            fclose(fpasc);
+                            HashAndRename(sourcename, "dkt", true);
+                        }
+                        if (bytes < - 32)
+                        {
+                            memset(keybuffer, 0, 33);
+                            bytes = - bytes;
+                            char tempname[1025];
+                            l = strlen(theApp -> sourcedirectory.c_str());
+                            strcpy(tempname, theApp -> targetdirectory.c_str());
+                            strcpy(tempname + strlen(tempname), sourcename + l);
+                            l = strlen(theApp -> targetdirectory.c_str());
+                            hash -> hashFile(sourcename, false);
+                            memcpy(dbPIkey.ptr, hash -> blockhash, 16);
+                            dbPIdata = dbPI -> fetchKey(1, dbPIkey);
+                            if (!dbPIdata.ptr)
+                            {
+                                dbPIdata.size = strlen(tempname) + 1 + 10;
+                                dbPIdata.ptr = (unsigned char *) malloc(dbPIdata.size + 1);
+                                sprintf((char *) dbPIdata.ptr, "%10d%s", psize, tempname);
+                                (void) dbPI -> storeData(1, dbPIkey, dbPIdata);
+                            }
+                            free(dbPIdata.ptr);
+                            dbPIdata.ptr = NULL;
+                            for (i = 0 ; i < 16 ; i++)
+                            {
+                                sprintf(hash1 + i * 2, "%02x", ((unsigned char *) hash -> blockhash) [i]);
+                            }
+                            strcpy(buffer, tempname);
+                            i = l + 1;
+                            l = strlen(buffer);
+                            while (i < l)
+                            {
+                                if ((buffer[i] == '/') || (buffer[i] == '\\'))
+                                {
+                                    buffer[i] = 0;
+                                    i = l;
+                                }
+                                i++;
+                            }
+                            int l;
+                            i = 0;
+                            while (i < 2)
+                            {
+                                if (stat(buffer, statbuffer))
+                                {
+                                    if (errno == ENOENT)
+                                    {
+#ifdef __WIN32__
+                                        l = mkdir(buffer);
+#else
+                                        l = mkdir(buffer, 777);
+#endif
+                                    }
+                                }
+                                i++;
+                                switch (i)
+                                {
+                                case 1:
+                                    sprintf(buffer + strlen(buffer), "/%dx%d", img_width, img_height);
+                                    break;
+                                case 2:
+                                    sprintf(buffer + strlen(buffer), "/%s.jpg", hash1);
+                                    break;
+                                }
+                            }
+                            wxFile * pf = new wxFile(buffer, wxFile::write);
+                            pf -> Write(picbuf, psize);
+                            delete pf;
+                            hash -> hashFile(buffer, false);
+                            for (i = 0 ; i < 16 ; i++)
+                            {
+                                sprintf(hash2 + i * 2, "%02x", ((unsigned char *) hash -> blockhash) [i]);
+                            }
+                            mil = dbPI -> GetMaxIndexLevel(1);
+                            if (mil != lmil)
+                            {
+                                printf("IL%02d: (%d)%s\n", mil, psize, buffer);
+                                lmil = mil;
+                            }
+                            if (!strcmp(hash1, hash2))
+                            {
+                                count_filesmoved++;
+                                if (p_writemd4hash)
+                                {
+                                    wxFile * pf = new wxFile(sourcename, wxFile::write);
+                                    pf -> Write(hash1, 32);
+                                    delete pf;
+                                }
+                            }
+                        }
+                    }
+                    free(picbuf);
+                }
+            }
+        }
+    }
 }
 
