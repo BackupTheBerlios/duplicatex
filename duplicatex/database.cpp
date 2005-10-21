@@ -8,6 +8,8 @@ int debugmode = 0;
 
 CDatabase::CDatabase(int indexanzahl, int index1size, char * filepath, char * filename)
 {
+    dbIndexanzahl = indexanzahl;
+    dbIndex1size = index1size;
     keys0Last.T = 1;
     keys0Last.P = 0x7fffffff;
     memset(keys0Last.K, 0xff, 128);
@@ -41,6 +43,14 @@ CDatabase::CDatabase(int indexanzahl, int index1size, char * filepath, char * fi
 
 CDatabase::~ CDatabase()
 {
+    if (dbIndexpointer -> IsOpened())
+    {
+        dbIndexpointer -> Close();
+    }
+    if (dbDatapointer -> IsOpened())
+    {
+        dbDatapointer -> Close();
+    }
     for (int i = 0 ; i < 129 ; i++)
     {
         free(keys0[i]);
@@ -521,6 +531,34 @@ void CDatabase::CREATEDB(char * dateiname, int indexanzahl, int index1size)
     delete statbuffer;
 }
 
+void CDatabase::clearDatabase()
+{
+    if (dbIndexpointer -> IsOpened())
+    {
+        if (dbDatapointer -> IsOpened())
+        {
+            FILE * db;
+            char buffer[1025];
+            dbIndexpointer -> Close();
+            dbDatapointer -> Close();
+            sprintf(buffer, "%s/%sd", dbFilepath, dbFilename);
+            db = fopen(buffer, "w");
+            if (db)
+            {
+                fclose(db);
+            }
+            sprintf(buffer, "%s/%si", dbFilepath, dbFilename);
+            db = fopen(buffer, "w");
+            if (db)
+            {
+                fclose(db);
+            }
+            sprintf(buffer, "%s/%s", dbFilepath, dbFilename);
+            CREATEDB(buffer, dbIndexanzahl, dbIndex1size);
+        }
+    }
+}
+
 int CDatabase::GETEFB()
 {
     int result;
@@ -638,14 +676,14 @@ void CDatabase::ADDINDEX(int indexnummer, int keylaenge)
         if (!dbheader.IndexFirstBlock[indexnummer])
         {
             dbheader.IndexFirstBlock[indexnummer] = GETEFB();
-	    memset(&indexheader,0,sizeof(DBindexheader));
+            memset( & indexheader, 0, sizeof(DBindexheader));
             indexheader.BlockType = 2;
             indexheader.IndexID = indexnummer;
             indexheader.FirstIndexBlock = GETEFB();
             indexheader.Keylength = keylaenge;
             indexheader.EntryLength = sizeof(DBkey) - 128 + (((3 + keylaenge) >> 2) << 2);
             indexheader.KeyCounterAll = 0;
-	    indexheader.maxIndexLevel = 0;
+            indexheader.maxIndexLevel = 0;
             memset(tempblock, 0, dbBlocksize);
             memcpy(tempblock, & indexheader, sizeof(DBindexheader));
             BLKWRITE(dbheader.IndexFirstBlock[indexnummer], tempblock);

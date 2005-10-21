@@ -55,7 +55,7 @@ bool smApp::OnInit()
     dbgfile = fopen("duplicatex.out", "w+r");
     if (dbgfile)
     {
-        smFrame = new wxFrame(NULL, 10001, "Duplicatex v1.0.2", wxDefaultPosition, wxSize(768, 556));
+        smFrame = new wxFrame(NULL, 10001, "Duplicatex v1.0.3", wxDefaultPosition, wxSize(768, 556));
         minerdlg = new CminerDlg(smFrame);
         if (smipv4.AnyAddress())
         {

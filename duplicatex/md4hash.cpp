@@ -1,23 +1,23 @@
-/*
-**** Duplicatex v1.0
-**** Find and markup duplicate files and/or delete it.
-****
-**** Copyright (C) 2005 Frank Schaefer (sf@mulinux.org)
-****
-**** This program is free software; you can redistribute it and/or
-**** modify it under the terms of the GNU General Public License
-**** as published by the Free Software Foundation; either version 2
-**** of the License, or (at your option) any later version.
-**** 
-**** This program is distributed in the hope that it will be useful,
-**** but WITHOUT ANY WARRANTY; without even the implied warranty of
-**** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-**** GNU General Public License for more details.
-****
-**** You should have received a copy of the GNU General Public License
-**** along with this program; if not, write to the Free Software
-**** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ /*
+ **** Duplicatex v1.0
+ **** Find and markup duplicate files and/or delete it.
+ ****
+ **** Copyright (C) 2005 Frank Schaefer (sf@mulinux.org)
+ ****
+ **** This program is free software; you can redistribute it and/or
+ **** modify it under the terms of the GNU General Public License
+ **** as published by the Free Software Foundation; either version 2
+ **** of the License, or (at your option) any later version.
+ ****
+ **** This program is distributed in the hope that it will be useful,
+ **** but WITHOUT ANY WARRANTY; without even the implied warranty of
+ **** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ **** GNU General Public License for more details.
+ ****
+ **** You should have received a copy of the GNU General Public License
+ **** along with this program; if not, write to the Free Software
+ **** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+    */
 
 #include "md4hash.h"
 
@@ -61,7 +61,7 @@ Cmd4hash::~ Cmd4hash()
     delete[] blockhash;
 }
 
-void Cmd4hash::hashFile(char * filename, bool fakecheck)
+void Cmd4hash::hashFile(char * filename, bool fakecheck, bool ed2k)
 {
     isfake = false;
     wxFile * fp = new wxFile(filename, wxFile::read);
@@ -124,7 +124,7 @@ void Cmd4hash::hashFile(char * filename, bool fakecheck)
         fp -> Close();
         if (hashtableindex > 1)
         {
-            bytes = hashBuffer(hashtable, 16 * hashtableindex);
+            bytes = hashBuffer(hashtable, 16 * hashtableindex, ed2k);
         }
     }
 }
@@ -169,7 +169,7 @@ void Cmd4hash::calc()
     blockhash[3] += d;
 }
 
-unsigned long Cmd4hash::hashBuffer(unsigned char * buffer, unsigned int length)
+unsigned long Cmd4hash::hashBuffer(unsigned char * buffer, unsigned int length, bool ed2k)
 {
     blockhash[0] = 0x67452301;
     blockhash[1] = 0xEFCDAB89;
@@ -185,6 +185,10 @@ unsigned long Cmd4hash::hashBuffer(unsigned char * buffer, unsigned int length)
         {
             if (bytes)
             {
+                if (ed2k)
+                {
+                    start = pos;
+                }
                 memcpy(MD4bytes, & buffer[start], bytes);
                 pos += bytes;
             }
@@ -205,6 +209,10 @@ unsigned long Cmd4hash::hashBuffer(unsigned char * buffer, unsigned int length)
         else
         {
             bytes = 64;
+            if (ed2k)
+            {
+                start = pos;
+            }
             memcpy(MD4bytes, & buffer[start], 64);
             pos += 64;
             calc();

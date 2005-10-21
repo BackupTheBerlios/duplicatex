@@ -113,6 +113,7 @@ class CDatabase
     int storeFile(int indexID, DatabaseDatum key, const char * filename, bool updateok);
     int storeData(int indexID, DatabaseDatum key, DatabaseDatum data);
     int updateData(int indexID, DatabaseDatum key, DatabaseDatum data);
+    void clearDatabase();
     void BLKREAD(int blocknumber, unsigned char * blockbuffer);
     void BLKWRITE(int blocknumber, unsigned char * blockbuffer);
     void KEYBLKREAD(int blocknumber, DBindexblockHeader * ibh, DBkey ** keys);
@@ -147,6 +148,8 @@ class CDatabase
     long dbIndexsize;
     wxFile * dbIndexpointer;
     wxFile * dbDatapointer;
+    int dbIndexanzahl;
+    short dbIndex1size;
     short dbBlocksize;
     int getIndexsize();
     int getDatasize();

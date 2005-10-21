@@ -28,6 +28,7 @@
 CpicFrame::CpicFrame(wxFrame * parent, const char * buffer, int buffersize, int w, int h, char * title)
 :wxFrame(parent, - 1, "")
 {
+    ptype=1;
     wxMemoryInputStream * mis = new wxMemoryInputStream(buffer, buffersize);
     image_jpg = new wxImage;
     image_jpg -> LoadFile( * mis, wxBITMAP_TYPE_ANY, - 1);
@@ -106,6 +107,35 @@ CpicFrame::CpicFrame(wxFrame * parent, const char * buffer, int buffersize, int 
     Connect( - 1, wxEVT_SCROLL_PAGEDOWN, WXOEF(wxScrollEventFunction) & CpicFrame::OnPaint);
     //Connect( - 1, wxEVT_MOTION, WXOEF(wxMouseEventFunction) & CpicFrame::OnMouseMotion);
     delete mis;
+}
+
+CpicFrame::CpicFrame(wxFrame * parent, int w, int h, char * title)
+:wxFrame(parent, - 1, "")
+{
+    ptype=2;
+    image_jpg = new wxImage;
+    imageXfsize = w;
+    imageYfsize = h;
+    imageXsize = w;
+    imageYsize = h;
+    imageXfpos = 0;
+    imageYfpos = 0;
+    mouseXpos = - 1;
+    mouseYpos = - 1;
+    sizer_root = new wxBoxSizer(wxVERTICAL);
+    Xf = 0;
+    Yf = 0;
+    sb1x = NULL;
+    sb1y = NULL;
+    bitmap_jpg = new wxBitmap(image_jpg -> Scale(imageXsize, imageYsize));
+    SetClientSize(imageXfsize + Xf, imageYfsize + Yf);
+    SetSizeHints(imageXfsize + Xf, imageYfsize + Yf, imageXsize + Xf, imageYsize + Yf);
+    SetSizer(sizer_root);
+    if (strlen(title))
+    {
+        SetTitle(title);
+    }
+    Connect( - 1, wxEVT_PAINT, WXOEF(wxPaintEventFunction) & CpicFrame::OnPaint);
 }
 
 CpicFrame::~ CpicFrame()

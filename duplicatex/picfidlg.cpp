@@ -31,11 +31,16 @@ wxImage * image_jpg;
 CpicfiDlg::CpicfiDlg(wxWindow * parent, int w, int h)
 :wxWindow(parent, - 1, wxPoint( - 1, - 1), wxSize(w, h))
 {
-    imageType = 0;
-    bitmap_jpg = (wxBitmap *) NULL;
-    image_jpg = (wxImage *) NULL;
     SetBackgroundColour( * wxWHITE);
     SetForegroundColour( * wxBLACK);
+    imageType = 0;
+    bitmap_jpg = new wxBitmap(w, h, - 1);
+    mdc = new wxMemoryDC();
+    mdc -> SelectObject( * bitmap_jpg);
+    mdc -> Clear();
+    delete bitmap_jpg;
+    bitmap_jpg = (wxBitmap *) NULL;
+    image_jpg = (wxImage *) NULL;
     Connect( - 1, wxEVT_PAINT, WXOEF(wxPaintEventFunction) & CpicfiDlg::OnPaint);
     imageXfsize = w;
     imageYfsize = h;
@@ -47,6 +52,7 @@ CpicfiDlg::CpicfiDlg(wxWindow * parent, int w, int h)
 
 CpicfiDlg::~ CpicfiDlg()
 {
+    delete mdc;
     if (bitmap_jpg)
     {
         delete bitmap_jpg;
@@ -57,6 +63,76 @@ CpicfiDlg::~ CpicfiDlg()
         image_jpg -> Destroy();
         image_jpg = NULL;
     }
+}
+
+void CpicfiDlg::P(int x, int y, char * text)
+{
+    mdc -> DrawText(_T(text), x, y);
+}
+
+void CpicfiDlg::PEN(int pen)
+{
+    switch (pen)
+    {
+    case 0:
+        //black
+        pcolour = wxColour(0, 0, 0);
+        break;
+    case 1:
+        //white
+        pcolour = wxColour(255, 255, 255);
+        break;
+    case 2:
+        //red
+        pcolour = wxColour(255, 63, 63);
+        break;
+    case 3:
+        //green
+        pcolour = wxColour(63, 255, 63);
+        break;
+    case 4:
+        //blue
+        pcolour = wxColour(63, 63, 255);
+        break;
+    }
+    mdc -> SetPen(wxPen(pcolour, 1, wxSOLID));
+}
+
+void CpicfiDlg::BRUSH(int brush)
+{
+    switch (brush)
+    {
+    case 0:
+        //black
+        bcolour = wxColour(0, 0, 0);
+        break;
+    case 1:
+        //white
+        bcolour = wxColour(255, 255, 255);
+        break;
+    case 2:
+        //red
+        bcolour = wxColour(255, 63, 63);
+        break;
+    case 3:
+        //green
+        bcolour = wxColour(63, 255, 63);
+        break;
+    case 4:
+        //blue
+        bcolour = wxColour(64, 64, 255);
+        break;
+    }
+    mdc -> SetBrush(wxBrush(bcolour, wxSOLID));
+}
+
+void CpicfiDlg::PBOX(int x, int y, int w, int h, int pen, int brush)
+{
+    PEN(pen);
+    BRUSH(brush);
+    mdc -> DrawRectangle(x, y, w, h);
+    wxPaintDC pdc(this);
+    pdc.Blit(0, 0, imageXfsize, imageYfsize, mdc, 0, 0);
 }
 
 void CpicfiDlg::DrawImage(wxPaintDC * pdc)
@@ -73,7 +149,6 @@ void CpicfiDlg::DrawImage(wxPaintDC * pdc)
         }
         if (image_jpg)
         {
-            wxMemoryDC mdc;
             if (bitmap_jpg)
             {
                 delete bitmap_jpg;
@@ -91,9 +166,14 @@ void CpicfiDlg::DrawImage(wxPaintDC * pdc)
                 {
                     h = imageYsize;
                 }
-                mdc.SelectObject( * bitmap_jpg);
-                pdc -> Blit(0, 0, w, h, & mdc, 0, 0);
+                mdc -> SelectObject(wxNullBitmap);
+                mdc -> SelectObject( * bitmap_jpg);
+                pdc -> Blit(0, 0, w, h, mdc, 0, 0);
             }
+        }
+        else
+        {
+            pdc -> Blit(0, 0, imageXfsize, imageYfsize, mdc, 0, 0);
         }
     }
 }
@@ -107,6 +187,10 @@ void CpicfiDlg::OnPaint(wxPaintEvent & WXUNUSED(event))
         if (bitmap_jpg)
         {
             pdc.DrawBitmap( * bitmap_jpg, imageXfpos, imageYfpos);
+        }
+        else
+        {
+            pdc .Blit(0, 0, imageXfsize, imageYfsize, mdc, 0, 0);
         }
     }
     else

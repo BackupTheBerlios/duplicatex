@@ -44,6 +44,11 @@ class CpicfiDlg:public wxWindow
     void LoadImage(DatabaseDatum * dataPic);
     void LoadImageGIF(DatabaseDatum * dataPic);
     void LoadImage3(DatabaseDatum * dataPic);
+    void PEN(int pen);
+    void BRUSH(int brush);
+    void P(int x, int y, char * text);
+    void PBOX(int x, int y, int w, int h, int pen, int brush);
+    wxMemoryDC * mdc;
     int imageXfpos;
     int imageYfpos;
     int imageXsize;
@@ -53,6 +58,9 @@ class CpicfiDlg:public wxWindow
     /* ****************gui ************** */
     wxBoxSizer * sizer_root;
     int imageType;
+    wxPaintDC *paintDC;
+    wxColour bcolour;
+    wxColour pcolour;
 };
 
 #endif

@@ -89,6 +89,7 @@ extraResourceOptions=
 7=wxthread.cpp
 8=minerdlg.cpp
 9=picframe.cpp
+10=htmlpage.cpp
 [Header]
 1=duplicatex.h
 2=metfile.h
@@ -100,7 +101,9 @@ extraResourceOptions=
 8=wxthread.h
 9=minerdlg.h
 10=picframe.h
+11=htmlpage.h
 [Resource]
 [Other]
 [History]
-minerdlg.cpp,44425
+minerdlg.h,0
+minerdlg.cpp,0

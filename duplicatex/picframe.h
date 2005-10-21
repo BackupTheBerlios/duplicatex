@@ -35,6 +35,7 @@ class CpicFrame:public wxFrame
 {
     public:
     CpicFrame(wxFrame * parent, const char * buffer, int buffersize, int width, int height, char * title);
+    CpicFrame(wxFrame * parent, int width, int height, char * title);
     ~ CpicFrame();
     void Clip(wxImage * temp_jpg);
     void OnMouseButton(wxMouseEvent & event);
@@ -51,6 +52,7 @@ class CpicFrame:public wxFrame
     int imageYfsize;
     int mouseXpos;
     int mouseYpos;
+    int ptype;
     /* ****************gui ************** */
     wxBoxSizer * sizer_root;
     wxScrollBar * sb1x;

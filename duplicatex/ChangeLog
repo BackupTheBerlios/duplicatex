@@ -40,3 +40,8 @@ Version 1.0.0
 *adding masking of complete full sourcelocation (targetdir/basedir/subdir1/subdir2/.../*)
 *optimized database-support
 
+2005-10-21
+----------
+*adding special avi-filetype-support
+*changes in gui
+*restructured sources
