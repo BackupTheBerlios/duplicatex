@@ -2527,11 +2527,19 @@ char * Chtmlpage::extractFilename(char * source)
             {
                 i = 99;
             }
-            else if(!strncasecmp(source, "thumb", 5))
+            else if(!strncasecmp(source, "image", 5))
             {
                 i = 99;
             }
             else if(!strncasecmp(source, "index", 5))
+            {
+                i = 99;
+            }
+            else if(!strncasecmp(source, "small", 5))
+            {
+                i = 99;
+            }
+            else if(!strncasecmp(source, "thumb", 5))
             {
                 i = 99;
             }
@@ -2547,7 +2555,15 @@ char * Chtmlpage::extractFilename(char * source)
             {
                 i = 99;
             }
+            else if(!strncasecmp(source, "big", 3))
+            {
+                i = 99;
+            }
             else if(!strncasecmp(source, "pic", 3))
+            {
+                i = 99;
+            }
+            else if(!strncasecmp(source, "pix", 3))
             {
                 i = 99;
             }

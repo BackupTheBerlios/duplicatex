@@ -1,23 +1,23 @@
-/*
-**** Duplicatex v1.0
-**** Find and markup duplicate files and/or delete it.
-****
-**** Copyright (C) 2005 Frank Schaefer (sf@mulinux.org)
-****
-**** This program is free software; you can redistribute it and/or
-**** modify it under the terms of the GNU General Public License
-**** as published by the Free Software Foundation; either version 2
-**** of the License, or (at your option) any later version.
-**** 
-**** This program is distributed in the hope that it will be useful,
-**** but WITHOUT ANY WARRANTY; without even the implied warranty of
-**** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-**** GNU General Public License for more details.
-****
-**** You should have received a copy of the GNU General Public License
-**** along with this program; if not, write to the Free Software
-**** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-*/
+ /*
+ **** Duplicatex v1.0
+ **** Find and markup duplicate files and/or delete it.
+ ****
+ **** Copyright (C) 2005 Frank Schaefer (sf@mulinux.org)
+ ****
+ **** This program is free software; you can redistribute it and/or
+ **** modify it under the terms of the GNU General Public License
+ **** as published by the Free Software Foundation; either version 2
+ **** of the License, or (at your option) any later version.
+ ****
+ **** This program is distributed in the hope that it will be useful,
+ **** but WITHOUT ANY WARRANTY; without even the implied warranty of
+ **** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ **** GNU General Public License for more details.
+ ****
+ **** You should have received a copy of the GNU General Public License
+ **** along with this program; if not, write to the Free Software
+ **** Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+    */
 
 #include "metfile_tag.h"
 #include <sys/time.h>
@@ -125,7 +125,7 @@ void CMetfileTag::WriteValue(wxFile * sourcefp, unsigned char sptype, short leng
     }
     else if(length)
     {
-        b = sourcefp -> Write( name, length);
+        b = sourcefp -> Write(name, length);
     }
     if (length)
     {
@@ -311,7 +311,23 @@ void CMetfileTag::Read(wxFile * sourcefp)
                 }
                 if (debug)
                 {
-                    printf("(%d)%s(0x", length, name);
+                    if (name[0] > 0x0c)
+                    {
+                        printf("(%d)%s(0x", length, name);
+                    }
+                    else
+                    {
+                        switch (name[0])
+                        {
+                        case 0x09:
+                        case 0x0a:
+                            printf("(%d)%s(0x", length, name + 1);
+                            break;
+                        default:
+                            printf("(%d)?name?(0x", length);
+                            break;
+                        }
+                    }
                     for (int i = 0 ; i < length ; i++)
                     {
                         printf("%02x", name[i]);
@@ -478,92 +494,95 @@ void CMetfileTag::Copy(wxFile * sourcefp, wxFile * targetfp)
                         }
                         targetfp -> Write( & specialtagtype, 1);
                     }
-                    switch (specialtagtype)
+                    if (debug)
                     {
-                    case 0x01:
-                        //printf("%02x_FILENAME.........", specialtagtype);
-                        break;
-                    case 0x02:
-                        //printf("%02x_FILESIZE.........", specialtagtype);
-                        break;
-                    case 0x03:
-                        printf("%02x_FILETYPE.........", specialtagtype);
-                        break;
-                    case 0x04:
-                        printf("%02x_FILEFORMAT.......", specialtagtype);
-                        break;
-                    case 0x05:
-                        printf("%02x_LASTSEENCOMPLETE.", specialtagtype);
-                        break;
-                    case 0x08:
-                        printf("%02x_TRANSFERED.......", specialtagtype);
-                        break;
-                    case 0x12:
-                        printf("%02x_PARTFILENAME.....", specialtagtype);
-                        break;
-                    case 0x13:
-                        printf("%02x_OLDDLPRIORITY....", specialtagtype);
-                        break;
-                    case 0x14:
-                        printf("%02x_STATUS...........", specialtagtype);
-                        break;
-                    case 0x15:
-                        printf("%02x_SOURCES..........", specialtagtype);
-                        break;
-                    case 0x16:
-                        printf("%02x_PERMISSIONS......", specialtagtype);
-                        break;
-                    case 0x17:
-                        printf("%02x_OLDULPRIORITY....", specialtagtype);
-                        break;
-                    case 0x18:
-                        printf("%02x_DLPRIORITY.......", specialtagtype);
-                        break;
-                    case 0x19:
-                        printf("%02x_ULPRIORITY.......", specialtagtype);
-                        break;
-                    case 0x30:
-                        printf("%02x_COMPLETESOURCES..", specialtagtype);
-                        break;
-                    case 0x50:
-                        //printf("%02x_ATTRANSFERED.....", specialtagtype);
-                        break;
-                    case 0x51:
-                        //printf("%02x_ATREQUESTED......", specialtagtype);
-                        break;
-                    case 0x52:
-                        //printf("%02x_ATACCEPTED.......", specialtagtype);
-                        break;
-                    case 0x53:
-                        //printf("%02x_CATEGORY.........", specialtagtype);
-                        break;
-                    case 0x54:
-                        //printf("%02x_ATTRANSFEREDHI...", specialtagtype);
-                        break;
-                    case 0xc1:
-                        //printf("%02x_DYNAMIC..........", specialtagtype);
-                        break;
-                    case 0xd0:
-                        //printf("%02x_MEDIAARTIST......", specialtagtype);
-                        break;
-                    case 0xd1:
-                        //printf("%02x_MEDIAALBUM.......", specialtagtype);
-                        break;
-                    case 0xd2:
-                        //printf("%02x_MEDIATITLE.......", specialtagtype);
-                        break;
-                    case 0xd3:
-                        //printf("%02x_MEDIALENGTH......", specialtagtype);
-                        break;
-                    case 0xd4:
-                        //printf("%02x_MEDIABITRATE.....", specialtagtype);
-                        break;
-                    case 0xd5:
-                        //printf("%02x_MEDIACODEC.......", specialtagtype);
-                        break;
-                    default:
-                        //printf("%02x_UNKNOWN..........", specialtagtype);
-                        break;
+                        switch (specialtagtype)
+                        {
+                        case 0x01:
+                            printf("%02x_FILENAME.........", specialtagtype);
+                            break;
+                        case 0x02:
+                            printf("%02x_FILESIZE.........", specialtagtype);
+                            break;
+                        case 0x03:
+                            printf("%02x_FILETYPE.........", specialtagtype);
+                            break;
+                        case 0x04:
+                            printf("%02x_FILEFORMAT.......", specialtagtype);
+                            break;
+                        case 0x05:
+                            printf("%02x_LASTSEENCOMPLETE.", specialtagtype);
+                            break;
+                        case 0x08:
+                            printf("%02x_TRANSFERED.......", specialtagtype);
+                            break;
+                        case 0x12:
+                            printf("%02x_PARTFILENAME.....", specialtagtype);
+                            break;
+                        case 0x13:
+                            printf("%02x_OLDDLPRIORITY....", specialtagtype);
+                            break;
+                        case 0x14:
+                            printf("%02x_STATUS...........", specialtagtype);
+                            break;
+                        case 0x15:
+                            printf("%02x_SOURCES..........", specialtagtype);
+                            break;
+                        case 0x16:
+                            printf("%02x_PERMISSIONS......", specialtagtype);
+                            break;
+                        case 0x17:
+                            printf("%02x_OLDULPRIORITY....", specialtagtype);
+                            break;
+                        case 0x18:
+                            printf("%02x_DLPRIORITY.......", specialtagtype);
+                            break;
+                        case 0x19:
+                            printf("%02x_ULPRIORITY.......", specialtagtype);
+                            break;
+                        case 0x30:
+                            printf("%02x_COMPLETESOURCES..", specialtagtype);
+                            break;
+                        case 0x50:
+                            printf("%02x_ATTRANSFERED.....", specialtagtype);
+                            break;
+                        case 0x51:
+                            printf("%02x_ATREQUESTED......", specialtagtype);
+                            break;
+                        case 0x52:
+                            printf("%02x_ATACCEPTED.......", specialtagtype);
+                            break;
+                        case 0x53:
+                            printf("%02x_CATEGORY.........", specialtagtype);
+                            break;
+                        case 0x54:
+                            printf("%02x_ATTRANSFEREDHI...", specialtagtype);
+                            break;
+                        case 0xc1:
+                            printf("%02x_DYNAMIC..........", specialtagtype);
+                            break;
+                        case 0xd0:
+                            printf("%02x_MEDIAARTIST......", specialtagtype);
+                            break;
+                        case 0xd1:
+                            printf("%02x_MEDIAALBUM.......", specialtagtype);
+                            break;
+                        case 0xd2:
+                            printf("%02x_MEDIATITLE.......", specialtagtype);
+                            break;
+                        case 0xd3:
+                            printf("%02x_MEDIALENGTH......", specialtagtype);
+                            break;
+                        case 0xd4:
+                            printf("%02x_MEDIABITRATE.....", specialtagtype);
+                            break;
+                        case 0xd5:
+                            printf("%02x_MEDIACODEC.......", specialtagtype);
+                            break;
+                        default:
+                            printf("%02x_UNKNOWN..........", specialtagtype);
+                            break;
+                        }
                     }
                 }
             }

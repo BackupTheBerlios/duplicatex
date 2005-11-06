@@ -32,7 +32,15 @@
 #include <sys/stat.h>
 #include <errno.h>
 
+#include "metfile_tag.h"
+
 extern int debug;
+
+struct GAP {
+	GAP *next;
+	unsigned long start;
+	unsigned long end;
+};
 
 class CMetfile 
 {
@@ -40,22 +48,31 @@ public:
 	CMetfile();	
 	CMetfile(char *path,char *filename);	
 	~CMetfile();
+ 	GAP *gaplist;
 	wxFile *Open(char *path,char *filename);
+	void WriteHashtable(FILE *fp);
+	void WriteGaplist(FILE *fp);
 	void Create(const char *fullfilename);
 	void WriteTo();
 	void Read();
 	void SetFilename(const char *filename);
+	void SetPartfilename(const char *filename);
 	void SetFilehash(unsigned char *filehash);
 	void SetFilesize(long filesize);
 	void SetHashtable(unsigned short partcount,unsigned char *hashtable);
 	void SetTagcount(int tagcount);
-	void ClearTagtable();
-	void AddTagToTable(int tagtype);
+	void ClearGaplist();
+	void ShowGaplist();
+	void SortGaplist();
+	void CopyGaplistFrom(GAP *sourceGaplist);
+	void AddGap(unsigned int start,unsigned int end);
+	void FillGap(unsigned int start,unsigned int end);
 	char *mf_filename;
-	char *mf_filehash;
+        char mf_filehash[33];
 	char *mf_partfile;
 	long mf_filesize;
 	wxFile *mf_metfile;
+	unsigned char checkid[16];
 	short parts;
 	unsigned char *parts_hashtable;
 protected:
@@ -64,8 +81,8 @@ protected:
 	unsigned char version;
 	bool isnewstyle;
 	unsigned int date;
-	unsigned char checkid[16];
 	unsigned char hash_current[16];
+	int gaplistCounter;
 };
 
 #endif

@@ -32,23 +32,16 @@
 
 #define WX1
 
-extern int debug;
-
 CwxThread * minerdlgThread;
 
-int name0deep = 0, name0count = 0, name0fcount = 0, dirdeep = 0;
-char * name0;
-char * name0type;
 int name1z = 0;
 char * name1[NAMEZMAX];
-char * dirbuffer[99];
 char tempname[BUFFERSIZE];
 int samplefilenamez = 0;
 int samplefilecount = 0;
 char matchdomain[65];
 char matchurl[65];
 char matchstart[65];
-int lmd, lmu, lms;
 wxString Csprachen[] =
 {
     "Deutsch",
@@ -74,6 +67,10 @@ CminerDlg::CminerDlg(wxWindow * parent)
     domainlast = (char *) malloc(BUFFERSIZE);
     domainnext = (char *) malloc(BUFFERSIZE);
     DATABASEp = (char *) malloc(BUFFERSIZE);
+    filename = (char *) malloc(BUFFERSIZE);
+    filenameTMP = (char *) malloc(BUFFERSIZE);
+    filepath = NULL;
+    filepathTMP = (char *) malloc(BUFFERSIZE);
     sprache = 0;
     hostname = new char[9];
     strcpy(hostname, "hostname");
@@ -85,10 +82,6 @@ CminerDlg::CminerDlg(wxWindow * parent)
     strcpy(DATABASEp, theApp -> targetdirectory.c_str());
     TARGETDIR = (char *) malloc(BUFFERSIZE);
     sprintf(TARGETDIR, "%s/%s", DATABASEp, "targetdir");
-    for (int i = 0 ; i < 100 ; i++)
-    {
-        dirbuffer[i] = (char *) malloc(512);
-    }
     celdeep = 0;
     name0 = new char[64];
     name0[0] = 0;
@@ -120,40 +113,48 @@ CminerDlg::CminerDlg(wxWindow * parent)
     sourcename = new char[BUFFERSIZE];
     sourcename_last = new char[BUFFERSIZE];
     hash = new Cmd4hash();
-    dbSMmKey.ptr = (unsigned char *) malloc(17);
-    dbSMmKey.size = 16;
-    dbSMmData.ptr = NULL;
-    dbSMmData.size = 0;
     dbPIkey.ptr = (unsigned char *) malloc(17);
     dbPIkey.size = 16;
     dbPIdata.ptr = NULL;
     dbPIdata.size = 0;
     dbPIresult.ptr = NULL;
     dbPIresult.size = 0;
+    dbSMkey.ptr = (unsigned char *) malloc(17);
+    dbSMkey.size = 16;
+    dbSMdata.ptr = NULL;
+    dbSMdata.size = 0;
+    dbSMresult.ptr = NULL;
+    dbSMresult.size = 0;
+    dbSHkey.ptr = (unsigned char *) malloc(33);
+    dbSHkey.size = 32;
+    dbSHdata.ptr = NULL;
+    dbSHdata.size = 0;
+    dbSHresult.ptr = NULL;
+    dbSHresult.size = 0;
     dbTMPkey.ptr = (unsigned char *) malloc(17);
     dbTMPkey.size = 16;
     dbTMPdata.ptr = NULL;
     dbTMPdata.size = 0;
     dbTMPresult.ptr = NULL;
     dbTMPresult.size = 0;
-    dbVIkey.ptr = (unsigned char *) malloc(17);
-    dbVIkey.size = 16;
-    dbVIdata.ptr = NULL;
-    dbVIdata.size = 0;
-    dbVIresult.ptr = NULL;
-    dbVIresult.size = 0;
-    dbURkey.ptr = (unsigned char *) malloc(33);
-    dbURkey.size = 32;
-    dbURdata.ptr = NULL;
-    dbURdata.size = 0;
-    dbURresult.ptr = NULL;
-    dbURresult.size = 0;
     dbTXkey.ptr = (unsigned char *) malloc(17);
     dbTXkey.size = 16;
     dbTXdata.ptr = NULL;
     dbTXdata.size = 0;
     dbTXresult.ptr = NULL;
     dbTXresult.size = 0;
+    dbURkey.ptr = (unsigned char *) malloc(33);
+    dbURkey.size = 32;
+    dbURdata.ptr = NULL;
+    dbURdata.size = 0;
+    dbURresult.ptr = NULL;
+    dbURresult.size = 0;
+    dbVIkey.ptr = (unsigned char *) malloc(17);
+    dbVIkey.size = 16;
+    dbVIdata.ptr = NULL;
+    dbVIdata.size = 0;
+    dbVIresult.ptr = NULL;
+    dbVIresult.size = 0;
     p_AVIexportMD4 = false;
     p_MPGexportMD4 = false;
     p_WMFexportMD4 = false;
@@ -167,15 +168,17 @@ CminerDlg::CminerDlg(wxWindow * parent)
     p_METseparaTYP = false;
     p_METcleanuTYP = false;
     p_ED2KhashMD4 = true;
-    p_METcreateINF = false;
-    p_creInfForPart = true;
-    p_creInfForAll = false;
+    p_useCOKEY = false;
+    p_PRTcreateISM = false;
+    p_PRTcreateOVN = false;
+    p_PRTsearchMET = true;
+    p_METcreateISM = false;
     p_METcreatePRT = false;
-    p_creMetForAll = false;
+    p_METrepairPRT = false;
+    p_STDcreateINF = false;
+    p_STDcreateMET = false;
     p_delHtmPxxCxx = false;
     p_simHtmPxxCxx = false;
-    p_cNewED2Kparts = false;
-    p_partfilesonly = false;
     p_doMD4hashing = true;
     p_addMD4tofnam = false;
     p_HTMLaddMD4 = false;
@@ -189,10 +192,12 @@ CminerDlg::CminerDlg(wxWindow * parent)
     p_DKTparse = false;
     p_GIFparse = false;
     p_HTMparse = false;
+    p_ISMparse = false;
     p_JPGparse = false;
     p_METparse = false;
     p_MP3parse = false;
     p_MPGparse = false;
+    p_PRTparse = false;
     p_STDparse = false;
     p_WAVparse = false;
     p_WD3parse = false;
@@ -211,6 +216,8 @@ CminerDlg::CminerDlg(wxWindow * parent)
     p_logduples = false;
     p_removedupext = false;
     p_selectvidfiles = false;
+    p_ISMimportMD4 = true;
+    p_ISMdeleteDUP = false;
     p_JPGexportMD4 = false;
     p_JPGaddRStoFN = false;
     p_JPGaddFNtoTA = false;
@@ -220,6 +227,7 @@ CminerDlg::CminerDlg(wxWindow * parent)
     p_GIFexportMD4 = false;
     p_GIFwrbackMD4 = false;
     p_GIFimportMD4 = false;
+    p_METimportMD4 = true;
     smPMfinddups = new wxMenu("Duplikate suchen und markieren");
     smPMfinddups -> AppendCheckItem(20001, ".");
     smPMfinddups -> AppendCheckItem(20002, ".");
@@ -242,26 +250,30 @@ CminerDlg::CminerDlg(wxWindow * parent)
     smPMdbhandling -> Append(20514, "Dateiinformationen importieren aus gdbm-Datenbank (*.DBMAIN)");
 #endif
     smPMdbhandling -> AppendCheckItem(20515, ".");
+    smPMdbhandling -> AppendCheckItem(20516, ".");
     //smPMdbhandling -> Append(20521, ".");
     smPMdbhandling -> Check(20501, p_creDBentry);
     smPMdbhandling -> Check(20515, p_ED2KhashMD4);
+    smPMdbhandling -> Check(20516, p_useCOKEY);
+    smPMstdfiles = new wxMenu("Standardverarbeitung von Dateien");
+    smPMstdfiles -> AppendCheckItem(21101, "create .ism for *ALL");
+    smPMstdfiles -> AppendCheckItem(21102, "create .met for *ALL");
+    smPMstdfiles -> Check(21101, p_STDcreateINF);
+    smPMstdfiles -> Check(21102, p_STDcreateMET);
     smPMhocfiles = new wxMenu("Verarbeitung überprüfter Dateien");
     smPMhocfiles -> AppendCheckItem(20401, ".");
     smPMhocfiles -> AppendCheckItem(20405, ".");
     smPMhocfiles -> AppendCheckItem(20406, ".");
-    smPMdbhandling -> AppendSeparator();
-    smPMhocfiles -> AppendCheckItem(20407, "create .ism for *ALL");
-    smPMhocfiles -> AppendCheckItem(20408, "create .met for *ALL");
-    smPMdbhandling -> AppendSeparator();
+    smPMhocfiles -> AppendSeparator();
     smPMhocfiles -> AppendCheckItem(20409, "delete htm/php/cgi/pry");
     smPMhocfiles -> AppendCheckItem(20410, "delsim htm/php/cgi/pry");
+    smPMhocfiles -> AppendCheckItem(20411, "debugger on/off");
     smPMhocfiles -> Check(20401, p_addMD4tofnam);
     smPMhocfiles -> Check(20405, p_VIDexportMD4);
     smPMhocfiles -> Check(20406, p_VIDimportMD4);
-    smPMhocfiles -> Check(20407, p_creInfForAll);
-    smPMhocfiles -> Check(20408, p_creMetForAll);
     smPMhocfiles -> Check(20409, p_delHtmPxxCxx);
     smPMhocfiles -> Check(20410, p_simHtmPxxCxx);
+    smPMhocfiles -> Check(20411, p_debugonoff);
     smPMmd4hashs = new wxMenu("MD4-Hashprocessing");
     smPMmd4hashs -> AppendCheckItem(20102, "With fakecheck(slower)");
     smPMmd4hashs -> AppendSeparator();
@@ -304,23 +316,37 @@ CminerDlg::CminerDlg(wxWindow * parent)
     smPMjpgfiles -> Check(20704, p_JPGaddRStoFN);
     smPMjpgfiles -> Check(20705, p_JPGaddFNtoTA);
     smPMjpgfiles -> Check(20706, p_JPGcreatePDS);
+    smPMismfiles = new wxMenu(_T("ISM(ed2k)-Verarbeitung"));
+    smPMismfiles -> AppendCheckItem(23381, "Importiere MD4-Hashs aus ISM-Dateien");
+    smPMismfiles -> Append(23382, "Lösche Datenbank mit MD4-Hashs aus MET- und ISM-Dateien (md4s.DBIDX)");
+    smPMismfiles -> Append(23383, "Exportiere Datenbank (md4s.DBIDX) nach 'md4s.export'");
+    smPMismfiles -> Append(23384, "Lösche STD-Duplikate mit Einträgen in der 'md4s.DBIDX'-Datenbank");
+    smPMismfiles -> Check(23381, p_ISMimportMD4);
+    smPMismfiles -> Check(23384, p_ISMdeleteDUP);
     smPMmetfiles = new wxMenu(_T("MET(ed2k)-Verarbeitung"));
+    smPMmetfiles -> AppendCheckItem(20207, "Importiere MD4-Hashs aus MET-Dateien");
+    smPMmetfiles -> Append(20208, "Lösche Datenbank mit MD4-Hashs aus MET- und ISM-Dateien (md4s.DBIDX)");
+    smPMmetfiles -> Check(20207, p_METimportMD4);
     smPMmetfiles -> AppendCheckItem(20201, "create ism-files");
     smPMmetfiles -> AppendCheckItem(20202, "sep ftypes");
     smPMmetfiles -> AppendCheckItem(20203, "create partfiles if needed");
     sprintf(buffer, "Cleanup metfiles - all but: %s", fTypes);
     smPMmetfiles -> AppendCheckItem(20204, buffer);
-    smPMmetfiles -> AppendCheckItem(20205, "Add realname to filename");
-    smPMmetfiles -> Check(20201, p_METcreateINF);
+    smPMmetfiles -> AppendCheckItem(20205, "Repair met-files with partfiles");
+    smPMmetfiles -> AppendCheckItem(20206, "Add realname to filename");
+    smPMmetfiles -> Check(20201, p_METcreateISM);
     smPMmetfiles -> Check(20202, p_METseparaTYP);
     smPMmetfiles -> Check(20203, p_METcreatePRT);
     smPMmetfiles -> Check(20204, p_METcleanuTYP);
-    smPMmetfiles -> Check(20205, false);
-    smPMpartfiles = new wxMenu("Partfile-Processing");
-    smPMpartfiles -> AppendCheckItem(20211, "create .ism for .part");
-    smPMpartfiles -> AppendCheckItem(20212, "create new-ed2k-parts");
-    smPMmetfiles -> Check(20211, p_creInfForPart);
-    smPMmetfiles -> Check(20212, p_cNewED2Kparts);
+    smPMmetfiles -> Check(20205, p_METrepairPRT);
+    smPMmetfiles -> Check(20206, false);
+    smPMprtfiles = new wxMenu("Partfile-Processing");
+    smPMprtfiles -> AppendCheckItem(20211, "create .ism for .part");
+    smPMprtfiles -> AppendCheckItem(20212, "create new-ed2k-parts");
+    smPMprtfiles -> AppendCheckItem(20213, "search .met for .part");
+    smPMprtfiles -> Check(20211, p_PRTcreateISM);
+    smPMprtfiles -> Check(20212, p_PRTcreateOVN);
+    smPMprtfiles -> Check(20213, p_PRTsearchMET);
     smPMrename = new wxMenu("Rename and/or moving files");
     smPMrename -> AppendSeparator();
     smPMrename -> AppendCheckItem(20301, "Set HDir(Homedirectory='./xyz(...)/...' to filename");
@@ -368,10 +394,12 @@ CminerDlg::CminerDlg(wxWindow * parent)
     button_DKTparse = new wxButton(this, 12326, "", wxPoint( - 1, - 1), wxSize(80, 24));
     button_GIFparse = new wxButton(this, 12325, "", wxPoint( - 1, - 1), wxSize(80, 24));
     button_HTMparse = new wxButton(this, 12323, "", wxPoint( - 1, - 1), wxSize(80, 24));
+    button_ISMparse = new wxButton(this, 12338, "", wxPoint( - 1, - 1), wxSize(80, 24));
     button_JPGparse = new wxButton(this, 12324, "", wxPoint( - 1, - 1), wxSize(80, 24));
     button_METparse = new wxButton(this, 12321, "", wxPoint( - 1, - 1), wxSize(80, 24));
     button_MP3parse = new wxButton(this, 12335, "", wxPoint( - 1, - 1), wxSize(80, 24));
     button_MPGparse = new wxButton(this, 12332, "", wxPoint( - 1, - 1), wxSize(80, 24));
+    button_PRTparse = new wxButton(this, 12337, "", wxPoint( - 1, - 1), wxSize(80, 24));
     button_STDparse = new wxButton(this, 12329, "", wxPoint( - 1, - 1), wxSize(80, 24));
     button_WAVparse = new wxButton(this, 12336, "", wxPoint( - 1, - 1), wxSize(80, 24));
     button_WD3parse = new wxButton(this, 12330, "", wxPoint( - 1, - 1), wxSize(80, 24));
@@ -397,6 +425,9 @@ CminerDlg::CminerDlg(wxWindow * parent)
     checkbox_HTMparse = new wxCheckBox(this, 11325, "", wxDefaultPosition
     , wxSize( - 1, - 1), 0, wxDefaultValidator, "pah");
     checkbox_HTMparse -> SetValue(p_HTMparse);
+    checkbox_ISMparse = new wxCheckBox(this, 11338, _T(""), wxPoint( - 1, - 1)
+    , wxDefaultSize, 0, wxDefaultValidator, "ism");
+    checkbox_ISMparse -> SetValue(p_ISMparse);
     checkbox_JPGparse = new wxCheckBox(this, 11326, "", wxDefaultPosition
     , wxSize( - 1, - 1), 0, wxDefaultValidator, "jpa");
     checkbox_JPGparse -> SetValue(p_JPGparse);
@@ -409,6 +440,9 @@ CminerDlg::CminerDlg(wxWindow * parent)
     checkbox_MPGparse = new wxCheckBox(this, 11332, _T(""), wxPoint( - 1, - 1)
     , wxDefaultSize, 0, wxDefaultValidator, "mpg");
     checkbox_MPGparse -> SetValue(p_WD3parse);
+    checkbox_PRTparse = new wxCheckBox(this, 11337, _T(""), wxPoint( - 1, - 1)
+    , wxDefaultSize, 0, wxDefaultValidator, "mfo");
+    checkbox_PRTparse -> SetValue(p_PRTparse);
     checkbox_STDparse = new wxCheckBox(this, 11329, _T(""), wxPoint( - 1, - 1)
     , wxDefaultSize, 0, wxDefaultValidator, "std");
     checkbox_STDparse -> SetValue(p_STDparse);
@@ -475,6 +509,10 @@ CminerDlg::CminerDlg(wxWindow * parent)
     sizer_h2v1h1 -> Add(button_HTMparse, 0, 0, 0);
     sizer_h2v1h1 -> Add(checkbox_METparse, 0, wxALIGN_CENTER_VERTICAL, 0);
     sizer_h2v1h1 -> Add(button_METparse, 0, 0, 0);
+    sizer_h2v1h1 -> Add(checkbox_PRTparse, 0, wxALIGN_CENTER_VERTICAL, 0);
+    sizer_h2v1h1 -> Add(button_PRTparse, 0, 0, 0);
+    sizer_h2v1h1 -> Add(checkbox_ISMparse, 0, wxALIGN_CENTER_VERTICAL, 0);
+    sizer_h2v1h1 -> Add(button_ISMparse, 0, 0, 0);
     sizer_h2v1h1 -> Add(checkbox_WD3parse, 0, wxALIGN_CENTER_VERTICAL, 0);
     sizer_h2v1h1 -> Add(button_WD3parse, 0, 0, 0);
     sizer_h2v1h1 -> Add(checkbox_DKTparse, 0, wxALIGN_CENTER_VERTICAL, 0);
@@ -517,10 +555,6 @@ CminerDlg::CminerDlg(wxWindow * parent)
     sizer_root -> Add(radiobox_LAN, 0, wxGROW | wxALIGN_CENTER_HORIZONTAL, 0);
 #ifndef WX1
     wxBoxSizer * sizer_MD4 = new wxBoxSizer(wxHORIZONTAL);
-    wxBoxSizer * sizer_PFO = new wxBoxSizer(wxHORIZONTAL);
-    checkbox_DEB = new wxCheckBox(this, 11301, _T("Debug on/off"), wxDefaultPosition,
-    wxDefaultSize, 0, wxDefaultValidator, "deb");
-    checkbox_DEB -> SetValue(p_debugonoff);
     checkbox_MD4 = new wxCheckBox(this, 11312, _T(""), wxDefaultPosition,
     wxDefaultSize, 0, wxDefaultValidator, "md4");
     checkbox_MD4 -> SetValue(p_doMD4hashing);
@@ -533,12 +567,6 @@ CminerDlg::CminerDlg(wxWindow * parent)
     checkbox_APC = new wxCheckBox(this, 11317, _T("Add PicCount to Dir"), wxDefaultPosition,
     wxDefaultSize, 0, wxDefaultValidator, "apc");
     checkbox_APC -> SetValue(p_addPICCtodir);
-    checkbox_PFO = new wxCheckBox(this, 11322, _T(""), wxDefaultPosition,
-    wxDefaultSize, 0, wxDefaultValidator, "pfo");
-    checkbox_PFO -> SetValue(p_partfilesonly);
-    wxButton * button_PARTFILES = new wxButton(this, 12322, "&Partfiles only");
-    sizer_PFO -> Add(checkbox_PFO, 0, wxALIGN_CENTER_VERTICAL, 0);
-    sizer_PFO -> Add(button_PARTFILES, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, 2);
     checkbox_DFI = new wxCheckBox(this, 11901, _T("Generate Dir(/-File)tree"), wxDefaultPosition,
     wxDefaultSize, 0, wxDefaultValidator, "dfi");
     checkbox_DFI -> SetValue(p_usingdirfile);
@@ -554,14 +582,12 @@ CminerDlg::CminerDlg(wxWindow * parent)
     checkbox_IGX = new wxCheckBox(this, 11905, _T("Don`t prefer *.x.*-files"), wxDefaultPosition,
     wxDefaultSize, 0, wxDefaultValidator, "igx");
     checkbox_IGX -> SetValue(p_createsample);
-    sizer_v1 -> Add(checkbox_DEB, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
     sizer_v1 -> Add(sizer_DUP, 0, wxALIGN_CENTER_VERTICAL | wxALL, 4);
     sizer_v2 -> Add(sizer_MD4, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
     wxButton * button_RENAME = new wxButton(this, 12901, "&Renaming and/or moving files");
     sizer_v2 -> Add(button_RENAME, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
     sizer_v2 -> Add(checkbox_APR, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
     sizer_v2 -> Add(checkbox_APC, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
-    sizer_v3 -> Add(sizer_PFO, 0, wxALIGN_CENTER_VERTICAL | wxALL, 2);
     sizer_v4 -> Add(sizer_v4h1, 0, 0, 0);
     sizer_v4 -> Add(sizer_v4h2, 0, 0, 0);
     sizer_v4 -> Add(sizer_v4h3, 0, 0, 0);
@@ -576,6 +602,8 @@ CminerDlg::CminerDlg(wxWindow * parent)
     Connect(11398, wxEVT_COMMAND_TEXT_ENTER, WXOEF WXEF WXCEF & CminerDlg::ButtonPARSE);
     Connect(12001, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonPARSE);
     Connect(11321, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxMETparse);
+    Connect(11337, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxPRTparse);
+    Connect(11338, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxISMparse);
     Connect(11401, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonCHSD);
     Connect(11402, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonCHDD);
     Connect(11403, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonCHTD);
@@ -592,10 +620,12 @@ CminerDlg::CminerDlg(wxWindow * parent)
     Connect(12326, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonDKTparse);
     Connect(12325, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonGIFparse);
     Connect(12323, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonHTMparse);
+    Connect(12338, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonISMparse);
     Connect(12324, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonJPGparse);
     Connect(12321, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonMETparse);
     Connect(12335, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonMP3parse);
     Connect(12332, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonMPGparse);
+    Connect(12337, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonPRTparse);
     Connect(12329, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonSTDparse);
     Connect(12336, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonWAVparse);
     Connect(12330, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonWD3parse);
@@ -605,22 +635,34 @@ CminerDlg::CminerDlg(wxWindow * parent)
     Connect(20002, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxRED);
     Connect(20004, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxDED);
     Connect(20005, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxLOG);
-    Connect(20201, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxIFM);
+    Connect(20201, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxMETcreateISM);
     Connect(20202, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxSFT);
-    Connect(20203, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCPM);
+    Connect(20203, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxMETcreatePRT);
     Connect(20204, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxMETcleanuTYP);
+    Connect(20205, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxMETrepairPRT);
+    Connect(20207, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxMETimportMD4);
+    Connect(20208, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ISMclearSHDB);
+    Connect(23381, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxISMimportMD4);
+    Connect(23382, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ISMclearSHDB);
+    Connect(23383, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ISMexportMD4);
+    Connect(23384, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxISMdeleteDUP);
+    Connect(20211, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxPRTcreateISM);
+    Connect(20212, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxPRTcreateOVN);
+    Connect(20213, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxPRTsearchMET);
     Connect(20401, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxAHF);
     Connect(20405, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxVIDexportMD4);
     Connect(20406, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxVIDimportMD4);
-    Connect(20407, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxIFO);
-    Connect(20408, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCMO);
+    Connect(21101, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxSTDcreateINF);
+    Connect(21102, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxSTDcreateMET);
     Connect(20409, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxDHP);
     Connect(20410, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxSHP);
+    Connect(20411, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxDEBUG);
     Connect(20501, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCreateDBentry);
     Connect(20511, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ClearDatabaseDUPLI);
     Connect(20512, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ImportDatabaseTXT);
     Connect(20513, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ExportDatabaseTXT);
     Connect(20515, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::ED2KhashMD4);
+    Connect(20516, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckCOKEY);
     Connect(20601, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCPH);
     Connect(20602, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCPJ);
     Connect(20603, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxDPY);
@@ -653,13 +695,10 @@ CminerDlg::CminerDlg(wxWindow * parent)
     Connect(11452, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonMATCHURLclr);
     Connect(11453, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonMATCHSTARTclr);
 #ifndef WX1
-    Connect(11301, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxDEB);
     Connect(11312, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxMD4);
     Connect(12311, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonMD4HASHS);
     Connect(11316, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxAPR);
     Connect(11317, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxAPC);
-    Connect(11322, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxPFO);
-    Connect(12322, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonPARTFILES);
     Connect(12901, wxEVT_COMMAND_BUTTON_CLICKED, WXOEF & CminerDlg::ButtonRENAME);
     Connect(11901, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxDFI);
     Connect(11902, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxGST);
@@ -667,8 +706,6 @@ CminerDlg::CminerDlg(wxWindow * parent)
     Connect(11904, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxWSF);
     Connect(11905, wxEVT_COMMAND_CHECKBOX_CLICKED, WXOEF & CminerDlg::CheckboxIGX);
     Connect(20102, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxFCK);
-    Connect(20211, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxIFP);
-    Connect(20212, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxCNE);
     Connect(20301, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxAHD);
     Connect(20302, wxEVT_COMMAND_MENU_SELECTED, WXOEF & CminerDlg::CheckboxMFL);
 #endif
@@ -868,6 +905,9 @@ CminerDlg::CminerDlg(wxWindow * parent)
 
 CminerDlg::~ CminerDlg()
 {
+    free(filename);
+    free(filenameTMP);
+    free(filepathTMP);
     int i = 0;
     while (i < toblockAnz)
     {
@@ -908,40 +948,41 @@ CminerDlg::~ CminerDlg()
     delete[] localip;
     delete[] storageid;
     delete hash;
-    if (dbSMmData.ptr)
-    {
-        free(dbSMmData.ptr);
-    }
-    free(dbSMmKey.ptr);
     if (dbPIdata.ptr)
     {
         free(dbPIdata.ptr);
     }
     free(dbPIkey.ptr);
+    if (dbSHdata.ptr)
+    {
+        free(dbSHdata.ptr);
+    }
+    free(dbSHkey.ptr);
+    if (dbSMdata.ptr)
+    {
+        free(dbSMdata.ptr);
+    }
+    free(dbSMkey.ptr);
     if (dbTMPdata.ptr)
     {
         free(dbTMPdata.ptr);
     }
     free(dbTMPkey.ptr);
-    if (dbVIdata.ptr)
-    {
-        free(dbVIdata.ptr);
-    }
-    free(dbVIkey.ptr);
-    if (dbURdata.ptr)
-    {
-        free(dbURdata.ptr);
-    }
-    free(dbURkey.ptr);
     if (dbTXdata.ptr)
     {
         free(dbTXdata.ptr);
     }
     free(dbTXkey.ptr);
-    for (int i = 0 ; i < 100 ; i++)
+    if (dbURdata.ptr)
     {
-        free(dirbuffer[i]);
+        free(dbURdata.ptr);
     }
+    free(dbURkey.ptr);
+    if (dbVIdata.ptr)
+    {
+        free(dbVIdata.ptr);
+    }
+    free(dbVIkey.ptr);
     free(DATABASEp);
     free(TARGETDIR);
 }
@@ -964,10 +1005,12 @@ void CminerDlg::lan00German()
     button_DKTparse -> SetLabel("DKT parsen");
     button_GIFparse -> SetLabel("GIF parsen");
     button_HTMparse -> SetLabel("HTM parsen");
+    button_ISMparse -> SetLabel("ISM parsen");
     button_JPGparse -> SetLabel("JPG parsen");
     button_METparse -> SetLabel("MET parsen");
     button_MP3parse -> SetLabel("MP3 parsen");
     button_MPGparse -> SetLabel("MPG parsen");
+    button_PRTparse -> SetLabel("PART parsen");
     button_STDparse -> SetLabel("STD parsen");
     button_WAVparse -> SetLabel("WAV parsen");
     button_WD3parse -> SetLabel("WD3 parsen");
@@ -984,6 +1027,7 @@ void CminerDlg::lan00German()
     smPMdbhandling -> SetLabel(20512, "Dateiinformationen importieren aus 'database.txt'");
     smPMdbhandling -> SetLabel(20513, "Dateiinformationen exportieren nach 'database.txt'");
     smPMdbhandling -> SetLabel(20515, "ed2k-kompatibler MD4-Hash");
+    smPMdbhandling -> SetLabel(20516, "Verwende Crossoverkey in der Datenbank");
     //smPMdbhandling ->SetLabel(20521, "JPG-File in Datenbank einbetten, Filename wird zum Key");
     smPMmetfiles -> SetTitle(_T("Metfile(ed2k)-Verarbeitung"));
     smPMmetfiles -> SetLabel(20201, "'.ism'-Infodateien generieren");
@@ -993,8 +1037,8 @@ void CminerDlg::lan00German()
     smPMhocfiles -> SetLabel(20401, "MD4-Hash in allen Dateinamen einbetten");
     smPMhocfiles -> SetLabel(20405, "Videodateien exportieren");
     smPMhocfiles -> SetLabel(20406, "Videodateien importieren");
-    smPMhocfiles -> SetLabel(20407, "ISM-Dateien generieren");
-    smPMhocfiles -> SetLabel(20408, "MET-Dateien generieren");
+    smPMstdfiles -> SetLabel(21101, "ISM-Dateien generieren");
+    smPMstdfiles -> SetLabel(21102, "MET-Dateien generieren");
     smPMjpgfiles -> SetLabel(20701, "JPG-Dateien exportieren");
     smPMjpgfiles -> SetLabel(20702, "MD4-Hash schreiben");
     smPMjpgfiles -> SetLabel(20703, "JPG-Dateien importieren");
@@ -1028,10 +1072,12 @@ void CminerDlg::lan01English()
     button_DKTparse -> SetLabel("Parse DKT");
     button_GIFparse -> SetLabel("Parse GIF");
     button_HTMparse -> SetLabel("Parse HTM");
+    button_ISMparse -> SetLabel("Parse ISM");
     button_JPGparse -> SetLabel("Parse JPG");
     button_METparse -> SetLabel("Parse MET");
     button_MP3parse -> SetLabel("Parse MP3");
     button_MPGparse -> SetLabel("Parse MPG");
+    button_PRTparse -> SetLabel("Parse PART");
     button_STDparse -> SetLabel("Parse STD");
     button_WAVparse -> SetLabel("Parse WAV");
     button_WD3parse -> SetLabel("Parse WD3");
@@ -1048,29 +1094,30 @@ void CminerDlg::lan01English()
     smPMdbhandling -> SetLabel(20512, "Import fileinfos to database from 'database.txt'");
     smPMdbhandling -> SetLabel(20513, "Export fileinfos from database to 'database.txt'");
     smPMdbhandling -> SetLabel(20515, "ed2k-compatible MD4-hash");
+    smPMdbhandling -> SetLabel(20516, "Use crossoverkey for database");
     //smPMdbhandling ->SetLabel(20521, "Store jpg-file, key=filename");
-    smPMmetfiles -> SetTitle(_T("Metfile-Processing"));
-    smPMmetfiles -> SetLabel(20201, "Create '.ism'-infofiles");
-    smPMmetfiles -> SetLabel(20202, "Separate filetypes");
-    smPMmetfiles -> SetLabel(20203, "Create partfiles, if missing");
+    smPMdktfiles -> SetLabel(20901, "Rename DKT-files");
+    smPMgiffiles -> SetLabel(20801, "Export GIF-files");
+    smPMgiffiles -> SetLabel(20802, "Write MD4-hash");
+    smPMgiffiles -> SetLabel(20803, "Import GIF-files");
     smPMhocfiles -> SetTitle(_T("Handling of checked files"));
     smPMhocfiles -> SetLabel(20401, "Add MD4 to all filenames");
     smPMhocfiles -> SetLabel(20405, "Export videofiles (avi,mpg,wmf,wmv)");
     smPMhocfiles -> SetLabel(20406, "Import videofiles (avi,mpg,wmf,wmv)");
-    smPMhocfiles -> SetLabel(20407, "create ISM-files");
-    smPMhocfiles -> SetLabel(20408, "create MET-files");
-    smPMjpgfiles -> SetLabel(20701, "Export JPG-files");
-    smPMjpgfiles -> SetLabel(20702, "Write MD4-hash");
-    smPMjpgfiles -> SetLabel(20703, "Import JPG-files");
-    smPMgiffiles -> SetLabel(20801, "Export GIF-files");
-    smPMgiffiles -> SetLabel(20802, "Write MD4-hash");
-    smPMgiffiles -> SetLabel(20803, "Import GIF-files");
+    smPMstdfiles -> SetLabel(21101, "create ISM-files");
+    smPMstdfiles -> SetLabel(21102, "create MET-files");
     smPMhtmfiles -> SetLabel(20601, "Create 'htmpage?.htm'-files for htm-links");
     smPMhtmfiles -> SetLabel(20602, "Create 'jpgpage?.htm'-files for jpg-links");
     smPMhtmfiles -> SetLabel(20603, "Delete Primary-files");
     smPMhtmfiles -> SetLabel(20604, "Use 'hardlock.txt'-file for blocking");
     smPMhtmfiles -> SetLabel(20605, "Add MD4 to html-filenames");
-    smPMdktfiles -> SetLabel(20901, "Rename DKT-files");
+    smPMjpgfiles -> SetLabel(20701, "Export JPG-files");
+    smPMjpgfiles -> SetLabel(20702, "Write MD4-hash");
+    smPMjpgfiles -> SetLabel(20703, "Import JPG-files");
+    smPMmetfiles -> SetTitle(_T("Metfile-Processing"));
+    smPMmetfiles -> SetLabel(20201, "Create '.ism'-infofiles");
+    smPMmetfiles -> SetLabel(20202, "Separate filetypes");
+    smPMmetfiles -> SetLabel(20203, "Create partfiles, if missing");
     smPMwd3files -> SetLabel(21001, "Delete WD3-files");
 }
 
@@ -1433,7 +1480,7 @@ void CminerDlg::Message(int mid, char * buffer)
             W(_T("... Verarbeitung laeuft, bitte warten!\n"));
             break;
         case 92:
-            W("beendet.\n");
+            W(_T("... Verarbeitung beendet.\n"));
             break;
         case 93:
             W("Analyse vorzeitig abgebrochen!\n");
@@ -1459,10 +1506,10 @@ void CminerDlg::Message(int mid, char * buffer)
             W(_T("Database cleared (*IDXi/*IDXd): "));
             break;
         case 91:
-            W(_T("... working, please wait ..."));
+            W(_T("... processing, please wait ...\n"));
             break;
         case 92:
-            W("finished:\n");
+            W(_T("... processing finished:\n"));
             break;
         case 93:
             W("... analyzing canceled.\n");
@@ -1504,6 +1551,143 @@ void CminerDlg::ClearDatabaseDUPLI()
     }
 }
 
+void CminerDlg::ISMclearSHDB(wxCommandEvent & event)
+{
+    if (!threadcount)
+    {
+        dbSH = new CDatabase(1, 32, DATABASEp, "md4s.DBIDX");
+        if (dbSH)
+        {
+            dbSH -> clearDatabase();
+            delete dbSH;
+        }
+        Message(1, "md4s.DBIDX");
+    }
+    else
+    {
+        Message(101, "");
+    }
+}
+
+void CminerDlg::ISMexportMD4(wxCommandEvent & event)
+{
+    tctrl_ARC -> Clear();
+    int counter = 0, counter2 = 0;
+    int c = 0, i = 0, j = 0;
+    if (!threadcount)
+    {
+        dbSH = new CDatabase(1, 32, DATABASEp, "md4s.DBIDX");
+        if (dbSH)
+        {
+            memset(dbSHkey.ptr, 0, 33);
+            sprintf(buffer, "%s/md4s.export", TARGETDIR);
+            wxFile * expf = new wxFile(buffer, wxFile::write);
+            do
+            {
+                if (dbSHdata.ptr)
+                {
+                    free(dbSHdata.ptr);
+                    dbSHdata.size = 0;
+                }
+                dbSHdata = dbSH -> getNextKey(1, dbSHkey);
+                if (dbSHdata.ptr)
+                {
+                    counter++;
+                    if (dbSHdata.ptr[0] < '5')
+                    {
+                        counter2++;
+                        if (! (counter2% 15))
+                        {
+                            tctrl_ARC -> Clear();
+                        }
+                        sprintf(buffer, "%d: %s\n", counter2, dbSHdata.ptr + 15);
+                        tctrl_ARC -> AppendText(buffer);
+                    }
+                    i = 0;
+                    buffer[i++] = 34;
+                    for (j = 0 ; j < 16 ; j++)
+                    {
+                        sprintf(buffer + i, "%02x", dbSHkey.ptr[j]);
+                        i += 2;
+                    }
+                    buffer[i++] = 34;
+                    buffer[i++] = ';';
+                    buffer[i++] = 34;
+                    for (j = 0 ; j < 16 ; j++)
+                    {
+                        sprintf(buffer + i, "%02x", dbSHkey.ptr[16 + j]);
+                        i += 2;
+                    }
+                    buffer[i++] = 34;
+                    buffer[i++] = ';';
+                    buffer[i++] = 34;
+                    for (j = 0 ; j < dbSHdata.size ; j++)
+                    {
+                        c = dbSHdata.ptr[j];
+                        switch (j)
+                        {
+                        case 1:
+                            buffer[i++] = 34;
+                            buffer[i++] = ';';
+                            buffer[i++] = 34;
+                            if (dbSHdata.ptr[0] < '5')
+                            {
+                                buffer[i++] = '0';
+                                buffer[i++] = 34;
+                                buffer[i++] = ';';
+                                buffer[i++] = 34;
+                            }
+                            break;
+                        case 14:
+                            buffer[i++] = 34;
+                            buffer[i++] = ';';
+                            buffer[i++] = 34;
+                            break;
+                        default:
+                            switch (c)
+                            {
+                            case 0:
+                            case 10:
+                            case 13:
+                                break;
+                            case 34:
+                                buffer[i++] = '_';
+                                break;
+                            default:
+                                buffer[i++] = c;
+                                break;
+                            }
+                            break;
+                        }
+                    }
+                    buffer[i++] = 34;
+                    buffer[i++] = ';';
+                    buffer[i++] = 13;
+                    buffer[i++] = 10;
+                    expf -> Write(buffer, i);
+                }
+            }
+            while (dbSHdata.ptr);
+            delete expf;
+            delete dbSH;
+            switch (sprache)
+            {
+            case 0:
+                sprintf(buffer, "%d Datensaetze exportiert nach '%s/md4s.export'\n", counter, TARGETDIR);
+                break;
+            case 1:
+                sprintf(buffer, "%d entries exported to '%s/md4s.export'\n", counter, TARGETDIR);
+                break;
+            }
+            Message(0, buffer);
+        }
+    }
+    else
+    {
+        Message(101, "");
+    }
+}
+
 void CminerDlg::ED2KhashMD4(wxCommandEvent & event)
 {
     if (!threadcount)
@@ -1515,6 +1699,19 @@ void CminerDlg::ED2KhashMD4(wxCommandEvent & event)
         Message(101, "");
     }
     smPMdbhandling -> Check(20515, p_ED2KhashMD4);
+}
+
+void CminerDlg::CheckCOKEY(wxCommandEvent & event)
+{
+    if (!threadcount)
+    {
+        p_useCOKEY = !p_useCOKEY;
+    }
+    else
+    {
+        Message(101, "");
+    }
+    smPMdbhandling -> Check(20516, p_useCOKEY);
 }
 
 void CminerDlg::ExportDatabaseTXT(wxCommandEvent & event)
@@ -1543,8 +1740,8 @@ void CminerDlg::ExportDatabaseTXT(wxCommandEvent & event)
                 dbSM = new CDatabase(1, 16, smdbpath, smdbfile);
                 if (dbSM)
                 {
-                    memset(dbSMmKey.ptr, 0, 16);
-                    sprintf(buffer, "%s/database.txt", DATABASEp);
+                    memset(dbSMkey.ptr, 0, 16);
+                    sprintf(buffer, "%s/database.txt", TARGETDIR);
                     wxFile * expf = new wxFile(buffer, wxFile::write);
                     do
                     {
@@ -1553,7 +1750,7 @@ void CminerDlg::ExportDatabaseTXT(wxCommandEvent & event)
                             free(tempData.ptr);
                             tempData.size = 0;
                         }
-                        tempData = dbSM -> getNextKey(1, dbSMmKey);
+                        tempData = dbSM -> getNextKey(1, dbSMkey);
                         if (tempData.ptr)
                         {
                             counter++;
@@ -1561,7 +1758,7 @@ void CminerDlg::ExportDatabaseTXT(wxCommandEvent & event)
                             buffer[0] = 34;
                             for (int i = 0 ; i < 16 ; i++)
                             {
-                                sprintf(buffer + 1 + i * 2, "%02x", dbSMmKey.ptr[i]);
+                                sprintf(buffer + 1 + i * 2, "%02x", dbSMkey.ptr[i]);
                             }
                             i = 33;
                             buffer[i++] = 34;
@@ -1607,10 +1804,12 @@ void CminerDlg::ExportDatabaseTXT(wxCommandEvent & event)
                     switch (sprache)
                     {
                     case 0:
-                        sprintf(buffer, "%d Datensaetze exportiert nach 'database.txt'\n", counter);
+                        sprintf(buffer, "%d Datensaetze exportiert nach '%s/database.txt'\n"
+                        , counter, TARGETDIR);
                         break;
                     case 1:
-                        sprintf(buffer, "%d entries exported to 'database.txt'\n", counter);
+                        sprintf(buffer, "%d entries exported to '%s/database.txt'\n"
+                        , counter, TARGETDIR);
                         break;
                     }
                     Message(0, buffer);
@@ -1714,8 +1913,8 @@ void CminerDlg::ImportDatabaseTXT(wxCommandEvent & event)
                                                 memcpy(tempkey, buffer + startpos, endpos - startpos);
                                                 tempkey[32] = 0;
                                                 from32to16(tempkey, tempKey.ptr);
-                                                memcpy(dbSMmKey.ptr, tempKey.ptr + 8, 8);
-                                                memcpy(dbSMmKey.ptr + 8, tempKey.ptr, 8);
+                                                memcpy(dbSMkey.ptr, tempKey.ptr + 8, 8);
+                                                memcpy(dbSMkey.ptr + 8, tempKey.ptr, 8);
                                                 break;
                                             case 1:
                                                 memset(databuffer, 0, BUFFERSIZE);
@@ -1755,20 +1954,20 @@ void CminerDlg::ImportDatabaseTXT(wxCommandEvent & event)
                                     break;
                                 }
                             }
-                            dbSMmData = dbSMtmp -> fetchKey(1, dbSMmKey);
-                            if (dbSMmData.ptr)
+                            dbSMdata = dbSMtmp -> fetchKey(1, dbSMkey);
+                            if (dbSMdata.ptr)
                             {
                                 //(new CpicFrame((wxFrame *)((smApp *) wxTheApp) -> smuledlg,
-                                //(char *) dbSMmData.ptr, dbSMmData.size, 200, 540, (char *) tempKey.ptr)) -> Show();
-                                free(dbSMmData.ptr);
-                                dbSMmData.ptr = NULL;
-                                dbSMmData.size = 0;
+                                //(char *) dbSMdata.ptr, dbSMdata.size, 200, 540, (char *) tempKey.ptr)) -> Show();
+                                free(dbSMdata.ptr);
+                                dbSMdata.ptr = NULL;
+                                dbSMdata.size = 0;
                             }
                             else
                             {
-                                dbSMmData.ptr = (unsigned char *) databuffer;
-                                dbSMmData.size = strlen(databuffer) + 1;
-                                if (!dbSMtmp -> storeData(1, dbSMmKey, dbSMmData))
+                                dbSMdata.ptr = (unsigned char *) databuffer;
+                                dbSMdata.size = strlen(databuffer) + 1;
+                                if (!dbSMtmp -> storeData(1, dbSMkey, dbSMdata))
                                 {
                                     counter++;
                                     if ((counter% 1000) == 1)
@@ -1777,8 +1976,8 @@ void CminerDlg::ImportDatabaseTXT(wxCommandEvent & event)
                                     }
                                 }
                             }
-                            dbSMmData.ptr = NULL;
-                            dbSMmData.size = 0;
+                            dbSMdata.ptr = NULL;
+                            dbSMdata.size = 0;
                         }
                     }
                     fclose(databaseFP);
@@ -1798,9 +1997,9 @@ void CminerDlg::ImportDatabaseTXT(wxCommandEvent & event)
                             {
                                 W(".");
                             }
-                            memcpy(dbSMmKey.ptr, tempKey.ptr + 8, 8);
-                            memcpy(dbSMmKey.ptr + 8, tempKey.ptr, 8);
-                            (void) dbSM -> storeData(1, dbSMmKey, tempData);
+                            memcpy(dbSMkey.ptr, tempKey.ptr + 8, 8);
+                            memcpy(dbSMkey.ptr + 8, tempKey.ptr, 8);
+                            (void) dbSM -> storeData(1, dbSMkey, tempData);
                         }
                     }
                     while (tempData.ptr);
@@ -1867,12 +2066,12 @@ void CminerDlg::ImportJpgFile(wxCommandEvent & event)
                 {
                     tctrl_ARC -> AppendText(_T("  Datei existiert schon in der Datenbank.\n"));
                 }
-                dbSMmData = dbSMtmp -> fetchKey(1, tempKey);
-                if (dbSMmData.ptr)
+                dbSMdata = dbSMtmp -> fetchKey(1, tempKey);
+                if (dbSMdata.ptr)
                 {
-                    free(dbSMmData.ptr);
-                    dbSMmData.ptr = NULL;
-                    dbSMmData.size = 0;
+                    free(dbSMdata.ptr);
+                    dbSMdata.ptr = NULL;
+                    dbSMdata.size = 0;
                 }
                 free(tempKey.ptr);
             }
@@ -1924,28 +2123,28 @@ void CminerDlg::ImportDBMAIN(wxCommandEvent & event)
                         }
                         else
                         {
-                            from32to16(gdbmKey.dptr, dbSMmKey.ptr);
-                            dbSMmData = dbSM -> fetchKey(1, dbSMmKey);
+                            from32to16(gdbmKey.dptr, dbSMkey.ptr);
+                            dbSMdata = dbSM -> fetchKey(1, dbSMkey);
                             if ((counter% 1000) == 1)
                             {
                                 tctrl_ARC -> AppendText(_T("."));
                             }
-                            if (dbSMmData.ptr)
+                            if (dbSMdata.ptr)
                             {
-                                free(dbSMmData.ptr);
+                                free(dbSMdata.ptr);
                             }
                             else
                             {
-                                dbSMmData.ptr = (unsigned char *) gdbmData.dptr;
-                                dbSMmData.size = gdbmData.dsize;
-                                if (!dbSM -> storeData(1, dbSMmKey, dbSMmData))
+                                dbSMdata.ptr = (unsigned char *) gdbmData.dptr;
+                                dbSMdata.size = gdbmData.dsize;
+                                if (!dbSM -> storeData(1, dbSMkey, dbSMdata))
                                 {
                                     //ok
                                 }
                             }
                             free(gdbmData.dptr);
-                            dbSMmData.ptr = NULL;
-                            dbSMmData.size = 0;
+                            dbSMdata.ptr = NULL;
+                            dbSMdata.size = 0;
                         }
                         gdbmNextkey = gdbm_nextkey(dbMainFP, gdbmKey);
                         free(gdbmKey.dptr);
@@ -2143,7 +2342,7 @@ void CminerDlg::ButtonSTDparse(wxCommandEvent & event)
     {
         if (!threadcount)
         {
-            //PopupMenu(smPMstdfiles, 32, 140);
+            PopupMenu(smPMstdfiles, 32, 140);
         }
         else
         {
@@ -2173,7 +2372,37 @@ void CminerDlg::ButtonMETparse(wxCommandEvent & event)
     {
         if (!threadcount)
         {
-            PopupMenu(smPMmetfiles, 240, 140);
+            PopupMenu(smPMmetfiles, 292, 140);
+        }
+        else
+        {
+            Message(101, "");
+        }
+    }
+}
+
+void CminerDlg::ButtonPRTparse(wxCommandEvent & event)
+{
+    if (p_PRTparse)
+    {
+        if (!threadcount)
+        {
+            PopupMenu(smPMprtfiles, 300, 140);
+        }
+        else
+        {
+            Message(101, "");
+        }
+    }
+}
+
+void CminerDlg::ButtonISMparse(wxCommandEvent & event)
+{
+    if (p_ISMparse)
+    {
+        if (!threadcount)
+        {
+            PopupMenu(smPMismfiles, 428, 140);
         }
         else
         {
@@ -2188,7 +2417,7 @@ void CminerDlg::ButtonWD3parse(wxCommandEvent & event)
     {
         if (!threadcount)
         {
-            PopupMenu(smPMwd3files, 344, 140);
+            PopupMenu(smPMwd3files, 556, 140);
         }
         else
         {
@@ -2203,7 +2432,7 @@ void CminerDlg::ButtonDKTparse(wxCommandEvent & event)
     {
         if (!threadcount)
         {
-            PopupMenu(smPMdktfiles, 448, 140);
+            PopupMenu(smPMdktfiles, 684, 140);
         }
         else
         {
@@ -2332,18 +2561,6 @@ void CminerDlg::ButtonWMVparse(wxCommandEvent & event)
     }
 }
 
-void CminerDlg::ButtonPARTFILES(wxCommandEvent & event)
-{
-    if (!threadcount)
-    {
-        PopupMenu(smPMpartfiles, 340, 28);
-    }
-    else
-    {
-        Message(101, "");
-    }
-}
-
 void CminerDlg::ButtonRENAME(wxCommandEvent & event)
 {
     if (!threadcount)
@@ -2356,10 +2573,16 @@ void CminerDlg::ButtonRENAME(wxCommandEvent & event)
     }
 }
 
-void CminerDlg::CheckboxCPM(wxCommandEvent & event)
+void CminerDlg::CheckboxMETcreatePRT(wxCommandEvent & event)
 {
     p_METcreatePRT = !p_METcreatePRT;
     smPMmetfiles -> Check(20203, p_METcreatePRT);
+}
+
+void CminerDlg::CheckboxMETrepairPRT(wxCommandEvent & event)
+{
+    p_METrepairPRT = !p_METrepairPRT;
+    smPMmetfiles -> Check(20205, p_METrepairPRT);
 }
 
 void CminerDlg::CheckboxMETcleanuTYP(wxCommandEvent & event)
@@ -2368,25 +2591,17 @@ void CminerDlg::CheckboxMETcleanuTYP(wxCommandEvent & event)
     smPMmetfiles -> Check(20204, p_METcleanuTYP);
 }
 
-void CminerDlg::CheckboxDEB(wxCommandEvent & event)
+void CminerDlg::CheckboxDEBUG(wxCommandEvent & event)
 {
     if (!threadcount)
     {
         p_debugonoff = !p_debugonoff;
-        if (p_debugonoff)
-        {
-            debug = 1;
-        }
-        else
-        {
-            debug = 0;
-        }
     }
     else
     {
         Message(101, "");
     }
-    checkbox_DEB -> SetValue(p_debugonoff);
+    smPMhocfiles -> Check(20411, p_debugonoff);
 }
 
 void CminerDlg::CheckboxMD4(wxCommandEvent & event)
@@ -2406,62 +2621,47 @@ void CminerDlg::CheckboxMETparse(wxCommandEvent & event)
 {
     if (!threadcount)
     {
-        p_METparse = checkbox_METparse -> IsChecked();
-        if (p_METparse)
-        {
-            p_selectvidfiles = false;
- /*
- p_partfilesonly = false;
- checkbox_PFO -> SetValue(p_partfilesonly);
- p_doMD4hashing = false;
- checkbox_MD4 -> SetValue(p_doMD4hashing);
-    */
-        }
+        p_METparse = !p_METparse;
     }
     else
     {
-        checkbox_METparse -> SetValue(p_METparse);
         Message(101, "");
     }
+    checkbox_METparse -> SetValue(p_METparse);
 }
 
-void CminerDlg::CheckboxPFO(wxCommandEvent & event)
+void CminerDlg::CheckboxISMparse(wxCommandEvent & event)
 {
     if (!threadcount)
     {
-        p_partfilesonly = checkbox_PFO -> IsChecked();
-        if (p_partfilesonly)
-        {
-            p_selectvidfiles = false;
-            p_METparse = false;
-            checkbox_METparse -> SetValue(p_METparse);
-            p_doMD4hashing = true;
-            checkbox_MD4 -> SetValue(p_doMD4hashing);
-            p_creInfForPart = true;
-            smPMpartfiles -> Check(20211, p_creInfForPart);
-            p_creDBentry = false;
-            smPMdbhandling -> Check(20501, p_creDBentry);
-            p_addMD4tofnam = false;
-            smPMhocfiles -> Check(20401, p_addMD4tofnam);
-            p_HTMLaddMD4 = false;
-            smPMhtmfiles -> Check(20605, p_HTMLaddMD4);
-            p_doMD4fakechk = true;
-            smPMmd4hashs -> Check(20102, p_doMD4fakechk);
-        }
+        p_ISMparse = !p_ISMparse;
     }
     else
     {
-        checkbox_PFO -> SetValue(p_partfilesonly);
         Message(101, "");
     }
+    checkbox_ISMparse -> SetValue(p_ISMparse);
 }
 
-void CminerDlg::CheckboxIFM(wxCommandEvent & event)
+void CminerDlg::CheckboxPRTparse(wxCommandEvent & event)
 {
     if (!threadcount)
     {
-        p_METcreateINF = !p_METcreateINF;
-        if (p_METcreateINF)
+        p_PRTparse = !p_PRTparse;
+    }
+    else
+    {
+        Message(101, "");
+    }
+    checkbox_PRTparse -> SetValue(p_PRTparse);
+}
+
+void CminerDlg::CheckboxMETcreateISM(wxCommandEvent & event)
+{
+    if (!threadcount)
+    {
+        p_METcreateISM = !p_METcreateISM;
+        if (p_METcreateISM)
         {
             p_METseparaTYP = false;
             smPMmetfiles -> Check(20202, p_METseparaTYP);
@@ -2471,7 +2671,46 @@ void CminerDlg::CheckboxIFM(wxCommandEvent & event)
     {
         Message(101, "");
     }
-    smPMmetfiles -> Check(20201, p_METcreateINF);
+    smPMmetfiles -> Check(20201, p_METcreateISM);
+}
+
+void CminerDlg::CheckboxISMimportMD4(wxCommandEvent & event)
+{
+    if (!threadcount)
+    {
+        p_ISMimportMD4 = !p_ISMimportMD4;
+    }
+    else
+    {
+        Message(101, "");
+    }
+    smPMismfiles -> Check(23381, p_ISMimportMD4);
+}
+
+void CminerDlg::CheckboxISMdeleteDUP(wxCommandEvent & event)
+{
+    if (!threadcount)
+    {
+        p_ISMdeleteDUP = !p_ISMdeleteDUP;
+    }
+    else
+    {
+        Message(101, "");
+    }
+    smPMismfiles -> Check(23384, p_ISMdeleteDUP);
+}
+
+void CminerDlg::CheckboxMETimportMD4(wxCommandEvent & event)
+{
+    if (!threadcount)
+    {
+        p_METimportMD4 = !p_METimportMD4;
+    }
+    else
+    {
+        Message(101, "");
+    }
+    smPMmetfiles -> Check(20207, p_METimportMD4);
 }
 
 void CminerDlg::CheckboxCPH(wxCommandEvent & event)
@@ -2500,61 +2739,69 @@ void CminerDlg::CheckboxCPJ(wxCommandEvent & event)
     smPMhtmfiles -> Check(20602, p_crePageForJPG);
 }
 
-void CminerDlg::CheckboxIFP(wxCommandEvent & event)
+void CminerDlg::CheckboxPRTcreateISM(wxCommandEvent & event)
 {
     if (!threadcount)
     {
-        p_creInfForPart = !p_creInfForPart;
+        p_PRTcreateISM = !p_PRTcreateISM;
     }
     else
     {
         Message(101, "");
     }
-    smPMpartfiles -> Check(20211, p_creInfForPart);
+    smPMprtfiles -> Check(20211, p_PRTcreateISM);
 }
 
-void CminerDlg::CheckboxCNE(wxCommandEvent & event)
+void CminerDlg::CheckboxPRTcreateOVN(wxCommandEvent & event)
 {
     if (!threadcount)
     {
-        p_cNewED2Kparts = !p_cNewED2Kparts;
-        if (p_cNewED2Kparts)
-        {
-            p_partfilesonly = true;
-            checkbox_PFO -> SetValue(p_partfilesonly);
-        }
+        p_PRTcreateOVN = !p_PRTcreateOVN;
     }
     else
     {
         Message(101, "");
     }
-    smPMpartfiles -> Check(20212, p_cNewED2Kparts);
+    smPMprtfiles -> Check(20212, p_PRTcreateOVN);
 }
 
-void CminerDlg::CheckboxIFO(wxCommandEvent & event)
+void CminerDlg::CheckboxPRTsearchMET(wxCommandEvent & event)
 {
     if (!threadcount)
     {
-        p_creInfForAll = !p_creInfForAll;
+        p_PRTsearchMET = !p_PRTsearchMET;
     }
     else
     {
         Message(101, "");
     }
-    smPMhocfiles -> Check(20407, p_creInfForAll);
+    smPMprtfiles -> Check(20213, p_PRTsearchMET);
 }
 
-void CminerDlg::CheckboxCMO(wxCommandEvent & event)
+void CminerDlg::CheckboxSTDcreateINF(wxCommandEvent & event)
 {
     if (!threadcount)
     {
-        p_creMetForAll = !p_creMetForAll;
+        p_STDcreateINF = !p_STDcreateINF;
     }
     else
     {
         Message(101, "");
     }
-    smPMhocfiles -> Check(20408, p_creMetForAll);
+    smPMstdfiles -> Check(21101, p_STDcreateINF);
+}
+
+void CminerDlg::CheckboxSTDcreateMET(wxCommandEvent & event)
+{
+    if (!threadcount)
+    {
+        p_STDcreateMET = !p_STDcreateMET;
+    }
+    else
+    {
+        Message(101, "");
+    }
+    smPMstdfiles -> Check(21102, p_STDcreateMET);
 }
 
 void CminerDlg::CheckboxDHP(wxCommandEvent & event)
@@ -2771,8 +3018,8 @@ void CminerDlg::CheckboxSFT(wxCommandEvent & event)
             p_doMD4hashing = false;
             checkbox_MD4 -> SetValue(p_doMD4hashing);
 #endif
-            p_METcreateINF = false;
-            smPMmetfiles -> Check(20201, p_METcreateINF);
+            p_METcreateISM = false;
+            smPMmetfiles -> Check(20201, p_METcreateISM);
             p_METparse = true;
             checkbox_METparse -> SetValue(p_METparse);
             p_markupduples = false;
@@ -3344,13 +3591,179 @@ void CminerDlg::CreatingFiletree()
     dbUR = NULL;
 }
 
+int CminerDlg::AddingDirStart()
+{
+    int retcode = 0;
+    fp_subdirs = NULL;
+    logfileFP = NULL;
+    htmp0 = NULL;
+    dbPI = NULL;
+    dbVI = NULL;
+    dbUR = NULL;
+    dbTMP = NULL;
+    dbSM = NULL;
+    dbSM = new CDatabase(1, 16, DATABASEp, "dupli.DBIDX");
+    if (dbSM)
+    {
+        dbPI = new CDatabase(1, 16, DATABASEp, "pics.DBIDX");
+        if (dbPI)
+        {
+            dbVI = new CDatabase(1, 16, DATABASEp, "vids.DBIDX");
+            if (dbVI)
+            {
+                dbUR = new CDatabase(1, 32, DATABASEp, "urls.DBIDX");
+                if (dbUR)
+                {
+                    dbSH = new CDatabase(1, 32, DATABASEp, "md4s.DBIDX");
+                    if (dbSH)
+                    {
+                        dbTMP = new CDatabase(1, 16, DATABASEp, "temp.DBIDX");
+                        if (dbTMP)
+                        {
+                            dbTMP -> clearDatabase();
+                            fp_subdirs = fopen("subdirs.txt", "a");
+                            sprintf((char *) buffer0, "%s/logfile.txt", DATABASEp);
+                            logfileFP = fopen((char *) buffer0, "a");
+                            htmp0 = new Chtmlpage("", 0);
+                            for (int i = 0 ; i < 99 ; i++)
+                            {
+                                subdir[i] = NULL;
+                                dirbuffer[i] = (char *) malloc(1);
+                                dirbuffer[i][0] = 0;
+                            }
+                            dirbufferDeep = 0;
+                            pds_count = 1;
+                            pds_filecount = 1;
+                            size_PDSfiles = 0;
+                            size_ALLfiles = 0;
+                            shp_fullsize = 0;
+                            htmpagenumber = 1;
+                            htmlinenumber = 0;
+                            jpgpagenumber = 1;
+                            jpglinenumber = 0;
+                            lmil = 0;
+                            mil = 0;
+                            samplerand = rand() % 65536;
+                            samplefilename = NULL;
+                            samplesourcename = NULL;
+                            sampledirname = NULL;
+                            samplefilenamez = 0;
+                            partfilecounter = 0;
+                            name0deep = 0;
+                            name0count = 0;
+                            name0fcount = 0;
+                            celdeep = 0;
+                            processcount = 0;
+                            count_dupremoved = 0;
+                            count_dupmarked = 0;
+                            count_duplogged = 0;
+                            count_fakmarked = 0;
+                            count_deleted = 0;
+                            count_filesmoved = 0;
+                            count_subdirsprocessed = 0;
+                            count_subdirsprocessed_last = 0;
+                            count_ALLfiles = 0;
+                            count_ALLfiles_last = 0;
+                            count_DKTfilesprocessed = 0;
+                            count_GIFfilesprocessed = 0;
+                            count_HTMfilesprocessed = 0;
+                            count_JPGfilesprocessed = 0;
+                            count_METfilesprocessed = 0;
+                            count_PRYfilesprocessed = 0;
+                            count_STDfilesprocessed = 0;
+                            count_WD3filesprocessed = 0;
+                            guilinecount = 20;
+                            Wgui("");
+                            retcode = 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return retcode;
+}
+
+void CminerDlg::AddingDirEnd()
+{
+    if (samplefilename)
+    {
+        delete [] samplefilename;
+        samplefilename = NULL;
+    }
+    if (samplesourcename)
+    {
+        delete [] samplesourcename;
+        samplesourcename = NULL;
+    }
+    if (sampledirname)
+    {
+        delete [] sampledirname;
+        sampledirname = NULL;
+    }
+    if (dbSH)
+    {
+        delete dbSH;
+        dbSH = NULL;
+    }
+    if (dbSM)
+    {
+        delete dbSM;
+        dbSMdata.ptr = NULL;
+        dbSMdata.size = 0;
+    }
+    if (dbTMP)
+    {
+        delete dbTMP;
+        dbTMP = NULL;
+    }
+    if (dbUR)
+    {
+        delete dbUR;
+        dbUR = NULL;
+    }
+    if (dbVI)
+    {
+        delete dbVI;
+        dbVI = NULL;
+    }
+    if (dbPI)
+    {
+        delete dbPI;
+        dbPI = NULL;
+    }
+    if (htmp0)
+    {
+        delete htmp0;
+        htmp0 = NULL;
+    }
+    if (fp_subdirs)
+    {
+        fclose(fp_subdirs);
+        fp_subdirs = NULL;
+    }
+    if (logfileFP)
+    {
+        fclose(logfileFP);
+        logfileFP = NULL;
+    }
+    for (int i = 0 ; i < 99 ; i++)
+    {
+        if (dirbuffer[i])
+        {
+            free(dirbuffer[i]);
+            dirbuffer[i] = NULL;
+        }
+        if (subdir[i])
+        {
+            closedir(subdir[i]);
+            subdir[i] = NULL;
+        }
+    }
+}
+
 void CminerDlg::AddingDir()
 {
-    pds_count = 1;
-    pds_filecount = 1;
-    size_PDSfiles = 0;
-    size_ALLfiles = 0;
-    shp_fullsize = 0;
     if (stat(TARGETDIR, statbuffer))
     {
         if (errno == ENOENT)
@@ -3362,105 +3775,42 @@ void CminerDlg::AddingDir()
 #endif
         }
     }
-    fp_subdirs = fopen("subdirs.txt", "a");
-    guilinecount = 20;
-    Wgui("");
-    htmp0 = new Chtmlpage("", 0);
-    htmpagenumber = 1;
-    htmlinenumber = 0;
-    jpgpagenumber = 1;
-    jpglinenumber = 0;
-    mil = 0;
-    lmil = 0;
-    dbPI = new CDatabase(1, 16, DATABASEp, "pics.DBIDX");
-    if (dbPI)
+    if (AddingDirStart())
     {
-        dbVI = new CDatabase(1, 16, DATABASEp, "vids.DBIDX");
-        if (dbVI)
+        //w+r
+        wxMutexGuiEnter();
+        switch (sprache)
         {
-            dbUR = new CDatabase(1, 32, DATABASEp, "urls.DBIDX");
-            if (dbUR)
-            {
-                dbTMP = new CDatabase(1, 16, DATABASEp, "temp.DBIDX");
-                if (dbTMP)
-                {
-                    dbTMP -> clearDatabase();
-                    sprintf((char *) buffer0, "%s/logfile.txt", DATABASEp);
-                    logfileFP = fopen((char *) buffer0, "w");
-                    //w+r
-                    samplerand = rand() % 65536;
-                    samplefilename = NULL;
-                    samplesourcename = NULL;
-                    sampledirname = NULL;
-                    samplefilenamez = 0;
-                    partfilecounter = 0;
-                    name0deep = 0;
-                    name0count = 0;
-                    name0fcount = 0;
-                    celdeep = 0;
-                    count_dupremoved = 0;
-                    count_dupmarked = 0;
-                    count_duplogged = 0;
-                    count_fakmarked = 0;
-                    count_deleted = 0;
-                    count_filesmoved = 0;
-                    count_subdirsprocessed = 0;
-                    count_subdirsprocessed_last = 0;
-                    count_ALLfiles = 0;
-                    count_ALLfiles_last = 0;
-                    count_DKTfilesprocessed = 0;
-                    count_GIFfilesprocessed = 0;
-                    count_HTMfilesprocessed = 0;
-                    count_JPGfilesprocessed = 0;
-                    count_METfilesprocessed = 0;
-                    count_PRYfilesprocessed = 0;
-                    count_STDfilesprocessed = 0;
-                    count_WD3filesprocessed = 0;
-                    counter_subdirs = 0;
-                    dbSM = new CDatabase(1, 16, DATABASEp, "dupli.DBIDX");
-                    wxMutexGuiEnter();
-                    switch (sprache)
-                    {
-                    case 0:
-                        tctrl_ARC -> AppendText("Quelle: ");
-                        tctrl_ARC -> AppendText(theApp -> sourcedirectory.c_str());
-                        tctrl_ARC -> AppendText("\n");
-                        sprintf(buffer, "%s/dupli.DBIDX", DATABASEp);
-                        tctrl_ARC -> AppendText(_T("Datenbank: "));
-                        tctrl_ARC -> AppendText(_T(buffer));
-                        tctrl_ARC -> AppendText("\n");
-                        break;
-                    case 1:
-                        tctrl_ARC -> AppendText("Source: ");
-                        tctrl_ARC -> AppendText(theApp -> sourcedirectory.c_str());
-                        tctrl_ARC -> AppendText("\n");
-                        sprintf(buffer, "%s/dupli.DBIDX", DATABASEp);
-                        tctrl_ARC -> AppendText(_T("Database: "));
-                        tctrl_ARC -> AppendText(_T(buffer));
-                        tctrl_ARC -> AppendText("\n");
-                        break;
-                    }
-                    if (p_logduples)
-                    {
-                        tctrl_ARC -> AppendText(_T("Logfile: "));
-                        tctrl_ARC -> AppendText(_T(buffer0));
-                        tctrl_ARC -> AppendText("\n");
-                    }
-                    Message(91, "");
-                    wxMutexGuiLeave();
-                    DIR * subdir[99];
-                    struct dirent * direntry;
-                    char * filename;
-                    filename = new char[1024];
-                    char * filename3;
-                    filename3 = new char[1024];
-                    deep = 0;
-                    processcount = 0;
-                    dbSMmData.ptr = (unsigned char *) databuffer;
-                    sprintf(dirbuffer[0], "%s/", theApp -> sourcedirectory.c_str());
-                    deep++;
-                    subdir[deep] = opendir(dirbuffer[deep - 1]);
-                    dbfilecount = 0;
+        case 0:
+            tctrl_ARC -> AppendText("Quelle: ");
+            tctrl_ARC -> AppendText(theApp -> sourcedirectory.c_str());
+            tctrl_ARC -> AppendText("\n");
+            sprintf(buffer, "%s/dupli.DBIDX", DATABASEp);
+            tctrl_ARC -> AppendText(_T("Datenbank: "));
+            tctrl_ARC -> AppendText(_T(buffer));
+            tctrl_ARC -> AppendText("\n");
+            break;
+        case 1:
+            tctrl_ARC -> AppendText("Source: ");
+            tctrl_ARC -> AppendText(theApp -> sourcedirectory.c_str());
+            tctrl_ARC -> AppendText("\n");
+            sprintf(buffer, "%s/dupli.DBIDX", DATABASEp);
+            tctrl_ARC -> AppendText(_T("Database: "));
+            tctrl_ARC -> AppendText(_T(buffer));
+            tctrl_ARC -> AppendText("\n");
+            break;
+        }
+        if (p_logduples)
+        {
+            tctrl_ARC -> AppendText(_T("Logfile: "));
+            tctrl_ARC -> AppendText(_T(buffer0));
+            tctrl_ARC -> AppendText("\n");
+        }
+        Message(91, "");
+        wxMutexGuiLeave();
+        struct dirent * direntry;
+        dbSMdata.ptr = (unsigned char *) databuffer;
+        dbfilecount = 0;
  /*
  fp1 = fopen("dupli.STATUS", "r");
  if (fp1)
@@ -3469,576 +3819,195 @@ void CminerDlg::AddingDir()
  fclose(fp1);
  }
     */
-                    int l;
-                    if (p_createsample)
-                    {
-                        sprintf(buffer, "%s/sample", DATABASEp);
-                        if (stat(buffer, statbuffer))
-                        {
-                            if (errno == ENOENT)
-                            {
+        int l;
+        if (p_createsample)
+        {
+            sprintf(buffer, "%s/sample", DATABASEp);
+            if (stat(buffer, statbuffer))
+            {
+                if (errno == ENOENT)
+                {
 #ifdef __WIN32__
-                                l = mkdir(buffer);
+                    l = mkdir(buffer);
 #else
-                                l = mkdir(buffer, 777);
+                    l = mkdir(buffer, 777);
 #endif
-                            }
-                        }
-                    }
-                    strcpy(sourcename_last, "");
-                    do
+                }
+            }
+        }
+        strcpy(sourcename, "");
+        strcpy(sourcename_last, "");
+        enterSubdir(theApp -> sourcedirectory.c_str());
+        do
+        {
+            if (subdir[dirbufferDeep])
+            {
+                do
+                {
+                    direntry = readdir(subdir[dirbufferDeep]);
+                    if (direntry)
                     {
-                        if (subdir[deep])
+                        filetype = 0;
+                        sprintf(filename, "%s", direntry -> d_name);
+                        sprintf(sourcename, "%s%s", dirbuffer[dirbufferDeep], filename);
+                        if (!strcmp(filename, "."))
                         {
-                            do
+                            filetype = - 1;
+                        }
+                        else if(!strcmp(filename, ".."))
+                        {
+                            filetype = - 2;
+                        }
+                        else if(!stat(sourcename, statbuffer))
+                        {
+                            if (filterNames(filename, sourcename))
                             {
-                                direntry = readdir(subdir[deep]);
-                                if (direntry)
+                                if (statbuffer -> st_mode & 0040000)
                                 {
                                     filetype = 0;
-                                    sprintf(filename, "%s", direntry -> d_name);
-                                    sprintf(sourcename, "%s%s", dirbuffer[deep - 1], filename);
-                                    if (!stat(sourcename, statbuffer))
+                                    enterSubdir(filename);
+                                    sampleGetBase();
+                                    count_subdirsprocessed++;
+                                    if (dirbufferDeep == 2)
                                     {
-                                        l = 1;
-                                        if (deep == 1)
-                                        {
-                                            if (lms)
-                                            {
-                                                if (strstr(sourcename, matchstart))
-                                                {
-                                                    lms = 0;
-                                                }
-                                            }
-                                            if (!lms)
-                                            {
-                                                if (lmd)
-                                                {
-                                                    if (!strstr(sourcename, matchdomain))
-                                                    {
-                                                        l = 0;
-                                                    }
-                                                    else
-                                                    {
-                                                        printf("matchbase: %s\n", sourcename);
-                                                    }
-                                                }
-                                            }
-                                            else
-                                            {
-                                                l = 0;
-                                            }
-                                        }
-                                        else if(!lms)
-                                        {
-                                            if (lmu)
-                                            {
-                                                if (!strstr(sourcename, matchurl))
-                                                {
-                                                    l = 0;
-                                                }
-                                                else
-                                                {
-                                                    printf("matchall: %s\n", sourcename);
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            l = 0;
-                                        }
-                                        if (l)
-                                        {
-                                            if (statbuffer -> st_mode & 0040000)
-                                            {
-                                                if (deep == 1)
-                                                {
-                                                    FILE * fp = fopen("dirproto.txt", "a");
-                                                    fprintf(fp, "%s\n", sourcename);
-                                                    fclose(fp);
-                                                }
-                                                counter_subdirs++;
-                                                //directory
-                                                if (!strcmp(filename, "."))
-                                                {
-                                                    sprintf(dirbuffer[deep], "%s%s/", dirbuffer[deep - 1], filename);
-                                                    filetype = - 1;
-                                                }
-                                                else if(!strcmp(filename, ".."))
-                                                {
-                                                    sprintf(dirbuffer[deep], "%s%s/", dirbuffer[deep - 1], filename);
-                                                    filetype = - 2;
-                                                }
-                                                else
-                                                {
-                                                    sprintf(dirbuffer[deep], "%s%s/", dirbuffer[deep - 1], filename);
-                                                    filetype = 0;
-                                                    if (!name0deep)
-                                                    {
-                                                        l = strlen(filename);
-                                                        if (l)
-                                                        {
-                                                            --l;
-                                                            if (filename[l] == ')')
-                                                            {
-                                                                //specialdirfile
-                                                                int status = 0, i;
-                                                                unsigned int j;
-                                                                i = l;
-                                                                do
-                                                                {
-                                                                    i--;
-                                                                    if (filename[i] == '(')
-                                                                    {
-                                                                        switch (status)
-                                                                        {
-                                                                        case 0:
-                                                                            delete[] name0type;
-                                                                            name0type = new char[l - i];
-                                                                            name0type[l - i - 1] = 0;
-                                                                            strncpy(name0type, filename + i + 1, l - i - 1);
-                                                                            if (i)
-                                                                            {
-                                                                                strncpy(name0, filename, i);
-                                                                            }
-                                                                            name0[i] = 0;
-                                                                            j = 0;
-                                                                            while (j < strlen(name0type))
-                                                                            {
-                                                                                if (name0type[j] == ',')
-                                                                                {
-                                                                                    name0type[j] = 0;
-                                                                                    j += 1000;
-                                                                                }
-                                                                                else
-                                                                                {
-                                                                                    j++;
-                                                                                }
-                                                                            }
-                                                                            i = - i;
-                                                                            status++;
-                                                                            break;
-                                                                        default:
-                                                                            break;
-                                                                        }
-                                                                    }
-                                                                }
-                                                                while (i > 0);
-                                                                if (strlen(name0type))
-                                                                {
-                                                                    if (!strlen(name0))
-                                                                    {
-                                                                        celdeep = deep;
-                                                                    }
-                                                                    else if(!name0deep)
-                                                                    {
-                                                                        name0count = 0;
-                                                                        name0fcount = 0;
-                                                                        name0deep = deep;
-                                                                        if (p_createsample)
-                                                                        {
-                                                                            if (sampledirname)
-                                                                            {
-                                                                                delete [] sampledirname;
-                                                                            }
-                                                                            sampledirname = new char[strlen(name0) + 1];
-                                                                            strcpy(sampledirname, name0);
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                            else
-                                            {
-                                                hash -> hashtableindex = 0;
-                                                filetype = htmp0 -> GetFiletype(filename);
-                                                fileextension = htmp0 -> GetExtension();
-                                                count_ALLfiles++;
-                                                if (p_delHtmPxxCxx || p_simHtmPxxCxx)
-                                                {
-                                                    switch (filetype)
-                                                    {
-                                                    case 4:
-                                                    case 5:
-                                                        if (htmp0 -> GetFilesubtype() < 99)
-                                                        {
-                                                            if (!p_simHtmPxxCxx)
-                                                            {
-                                                                (void) unlink(sourcename);
-                                                            }
-                                                            shp_fullsize += statbuffer -> st_size;
-                                                            sprintf(buffer, "del(%ld):%s\n"
-                                                            , shp_fullsize, sourcename);
-                                                            Wgui(buffer);
-                                                            filetype = - 1;
-                                                        }
-                                                        break;
-                                                    }
-                                                }
-                                            }
-                                            if (filetype >= 0)
-                                            {
-                                                filesize = statbuffer -> st_size;
-                                                size_ALLfiles += filesize;
-                                                if (filesize > 500000)
-                                                {
-                                                    sprintf(buffer, "%ld: %s\n", filesize, sourcename);
-                                                    FILE * fp = fopen("bigfile.log", "a");
-                                                    fprintf(fp, buffer);
-                                                    fclose(fp);
-                                                }
-                                                timet0 = time(NULL);
-                                                switch (filetype)
-                                                {
-                                                case 0:
-                                                    count_subdirsprocessed++;
-                                                    sprintf(buffer
-                                                    , "Subdirs: %ld  Files: %ld  PDScount: %d  PDSfiles: %d  PDSbytes: %ld/%lu"
-                                                    , count_subdirsprocessed, count_ALLfiles, pds_count
-                                                    , pds_filecount, size_PDSfiles, size_ALLfiles);
-                                                    wxMutexGuiEnter();
-                                                    stext_C1 -> SetLabel(buffer);
-                                                    wxMutexGuiLeave();
-                                                    deep++;
-                                                    subdir[deep] = opendir(dirbuffer[deep - 1]);
-                                                    if (!subdir[deep])
-                                                    {
-                                                        deep--;
-                                                    }
-                                                    if (deep == 2)
-                                                    {
-                                                        GetDomain(domainlast, sourcename);
-                                                        storeUrls(domainlast, "");
-                                                        protoSubdirs();
-                                                    }
-                                                    break;
-                                                case 1:
-                                                    if (!p_removedupext)
-                                                    {
-                                                        if (p_STDparse)
-                                                        {
-                                                            Process_STDfile(dirbuffer[deep - 1], filename);
-                                                        }
-                                                    }
-                                                    break;
-                                                case 4:
-                                                    if (!p_removedupext)
-                                                    {
-                                                        switch (htmp0 -> GetFilesubtype())
-                                                        {
-                                                        case 0:
-                                                            if (p_STDparse)
-                                                            {
-                                                                Process_STDfile(dirbuffer[deep - 1], filename);
-                                                            }
-                                                            break;
-                                                        case 101:
-                                                            Process_PRYfile(dirbuffer[deep - 1], filename);
-                                                            break;
-                                                        default:
-                                                            if (htmp0 -> GetFilesubtype() < 99)
-                                                            {
-                                                                if (p_HTMparse)
-                                                                {
-                                                                    Process_HTMfile(dirbuffer[deep - 1], filename);
-                                                                }
-                                                                else
-                                                                {
-                                                                    if (p_STDparse)
-                                                                    {
-                                                                        Process_STDfile(dirbuffer[deep - 1], filename);
-                                                                    }
-                                                                }
-                                                            }
-                                                            else
-                                                            {
-                                                                if (p_STDparse)
-                                                                {
-                                                                    Process_STDfile(dirbuffer[deep - 1], filename);
-                                                                }
-                                                            }
-                                                            break;
-                                                        }
-                                                    }
-                                                    break;
-                                                case 5:
-                                                    if (!p_removedupext)
-                                                    {
-                                                        if (p_WD3parse)
-                                                        {
-                                                            Process_WD3file(dirbuffer[deep - 1], filename);
-                                                        }
-                                                    }
-                                                    break;
-                                                case 6:
-                                                    //vidfiles
-                                                    if (!p_removedupext)
-                                                    {
-                                                        switch (htmp0 -> GetFilesubtype())
-                                                        {
-                                                        case 1:
-                                                            if (p_AVIparse)
-                                                            {
-                                                                Process_AVIfile(dirbuffer[deep - 1], filename);
-                                                            }
-                                                            break;
-                                                        }
-                                                        if (p_VIDexportMD4 | p_VIDimportMD4)
-                                                        {
-                                                            Process_VIDEOfile(dirbuffer[deep - 1], filename);
-                                                        }
-                                                        else
-                                                        {
-                                                            if (p_STDparse)
-                                                            {
-                                                                Process_STDfile(dirbuffer[deep - 1], filename);
-                                                            }
-                                                        }
-                                                    }
-                                                    break;
-                                                case 7:
-                                                    if (!p_removedupext)
-                                                    {
-                                                        switch (htmp0 -> GetFilesubtype())
-                                                        {
-                                                        case 1:
-                                                            if (p_JPGparse)
-                                                            {
-                                                                Process_JPGfile(dirbuffer[deep - 1], filename);
-                                                            }
-                                                            else
-                                                            {
-                                                                if (p_STDparse)
-                                                                {
-                                                                    Process_STDfile(dirbuffer[deep - 1], filename);
-                                                                }
-                                                            }
-                                                            break;
-                                                        case 3:
-                                                            if (p_GIFparse)
-                                                            {
-                                                                Process_GIFfile(dirbuffer[deep - 1], filename);
-                                                            }
-                                                            else
-                                                            {
-                                                                if (p_STDparse)
-                                                                {
-                                                                    Process_STDfile(dirbuffer[deep - 1], filename);
-                                                                }
-                                                            }
-                                                            break;
-                                                        default:
-                                                            if (p_STDparse)
-                                                            {
-                                                                Process_STDfile(dirbuffer[deep - 1], filename);
-                                                            }
-                                                            break;
-                                                        }
-                                                    }
-                                                    break;
-                                                case 8:
-                                                    //.part-files
-                                                    if (p_partfilesonly)
-                                                    {
-                                                        if (!p_removedupext)
-                                                        {
-                                                            if (p_STDparse)
-                                                            {
-                                                                Process_STDfile(dirbuffer[deep - 1], filename);
-                                                            }
-                                                        }
-                                                    }
-                                                    break;
-                                                case 9:
-                                                    //.met-files
-                                                    if (p_METparse)
-                                                    {
-                                                        Process_METfile(dirbuffer[deep - 1], filename);
-                                                    }
-                                                    else
-                                                    {
-                                                        if (p_STDparse)
-                                                        {
-                                                            Process_STDfile(dirbuffer[deep - 1], filename);
-                                                        }
-                                                    }
-                                                    break;
-                                                case 11:
-                                                    if (p_DKTparse)
-                                                    {
-                                                        Process_DKTfile(dirbuffer[deep - 1], filename);
-                                                    }
-                                                    else
-                                                    {
-                                                        if (p_STDparse)
-                                                        {
-                                                            Process_STDfile(dirbuffer[deep - 1], filename);
-                                                        }
-                                                    }
-                                                    //dup-files:
-                                                case 91:
-                                                    if (p_removedupext)
-                                                    {
-                                                        count_dupremoved++;
-                                                        int i;
-                                                        strcpy(filename3, sourcename);
-                                                        i = strlen(filename3);
-                                                        while (i > 0)
-                                                        {
-                                                            if (filename3[--i] == '.')
-                                                            {
-                                                                filename3[i] = 0;
-                                                                i = - i;
-                                                            }
-                                                        }
-                                                        if (strcmp(filename3, sourcename))
-                                                        {
-                                                            (void) rename(sourcename, filename3);
-                                                        }
-                                                    }
-                                                    break;
-                                                case 92:
-                                                    //.bak-files
-                                                    break;
-                                                case 93:
-                                                    //.ism-files(infofiles)
-                                                    break;
-                                                default:
-                                                    break;
-                                                }
-                                            }
-                                        }
+                                        GetDomain(domainlast, sourcename);
+                                        storeUrls(domainlast, "");
+                                        protoSubdirs();
                                     }
                                 }
-                                if (minerdlgThread -> TD())
+                                else
                                 {
-                                    direntry = NULL;
-                                    deep = - 1;
+                                    executeFiletype();
                                 }
                             }
-                            while (direntry);
-                            closedir(subdir[deep--]);
-                            if (deep >= 0)
-                            {
-                                if (celdeep == deep)
-                                {
-                                    celdeep = 0;
-                                }
-                                if (name0deep == deep)
-                                {
-                                    if (samplefilename)
-                                    {
-                                        if (samplesourcename)
-                                        {
-                                            if (p_nosubfolders)
-                                            {
-                                                sprintf(buffer, "%s/sample", DATABASEp);
-                                            }
-                                            else
-                                            {
-                                                sprintf(buffer, "%s/sample/%s", DATABASEp, name0);
-                                            }
-                                            if (p_foldersonly)
-                                            {
-                                                sprintf(buffer + strlen(buffer), "(%s)", name0type);
-                                                if (stat(buffer, statbuffer))
-                                                {
-                                                    if (errno == ENOENT)
-                                                    {
-                                                        int l;
-#ifdef __WIN32__
-                                                        l = mkdir(buffer);
-#else
-                                                        l = mkdir(buffer, 777);
-#endif
-                                                    }
-                                                }
-                                            }
-                                            else
-                                            {
-    /* filecopy:*/
-                                                FILE * fps, * fpt;
-                                                fps = fopen(samplesourcename, "r");
-                                                if (fps)
-                                                {
-                                                    sprintf(buffer + strlen(buffer), "/%s", samplefilename);
-                                                    fpt = fopen(buffer, "w+r");
-                                                    if (fpt)
-                                                    {
-                                                        long bytes = 0, bytet = 0;
-                                                        while ((!feof(fps)) && (bytet == bytes))
-                                                        {
-                                                            bytes = fread(buffer0, 1, BUFFERSIZE, fps);
-                                                            if (bytes)
-                                                            {
-                                                                bytet = fwrite(buffer0, 1, bytes, fpt);
-                                                            }
-                                                        }
-                                                        fclose(fpt);
-                                                    }
-                                                    fclose(fps);
-                                                }
-                                            }
-    /* filecopy_end*/
-                                            delete[] samplesourcename;
-                                            samplesourcename = NULL;
-                                        }
-                                        delete[] samplefilename;
-                                        samplefilename = NULL;
-                                    }
-                                    if (sampledirname)
-                                    {
-                                        delete[] sampledirname;
-                                        sampledirname = NULL;
-                                        samplefilenamez = 0;
-                                    }
-                                    if (name0deep)
-                                    {
-                                        if (p_addPICCtodir)
-                                        {
-                                            sprintf(sourcename, "%s", dirbuffer[deep]);
-                                            if (strlen(sourcename) > 1)
-                                            {
-                                                sourcename[strlen(sourcename) - 1] = 0;
-                                            }
-                                            if (name0fcount != 1)
-                                            {
-                                                sprintf(tempname, "%s%s(%s,%dpics)", dirbuffer[deep - 1], name0, name0type, name0fcount);
-                                            }
-                                            else
-                                            {
-                                                sprintf(tempname, "%s%s(%s,%dpic)", dirbuffer[deep - 1], name0, name0type, name0fcount);
-                                            }
-                                            if (strlen(tempname))
-                                            {
-                                                if (rename(sourcename, tempname))
-                                                {
-                                                    printf("rename-error:\n");
-                                                    printf("tn: %s\n", tempname);
-                                                    printf("tn: %s\n", tempname);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    name0deep = 0;
-                                    name0fcount = 0;
-                                }
-                            }
-                        }
-                        else
-                        {
-                            deep--;
                         }
                     }
-                    while (deep > 0);
-                    protoSubdirs();
-                    checkANDstoreJPG("zzz");
-                    checkANDstoreHTM("zzz");
-                    delete[] filename;
-                    delete[] filename3;
+                    if (minerdlgThread -> TD())
+                    {
+                        direntry = NULL;
+                        dirbufferDeep = - 1;
+                    }
+                }
+                while (direntry);
+                leaveSubdir();
+                if (dirbufferDeep >= 0)
+                {
+                    if (celdeep == dirbufferDeep)
+                    {
+                        celdeep = 0;
+                    }
+                    if (name0deep == dirbufferDeep)
+                    {
+                        if (samplefilename)
+                        {
+                            if (samplesourcename)
+                            {
+                                if (p_nosubfolders)
+                                {
+                                    sprintf(buffer, "%s/sample", DATABASEp);
+                                }
+                                else
+                                {
+                                    sprintf(buffer, "%s/sample/%s", DATABASEp, name0);
+                                }
+                                if (p_foldersonly)
+                                {
+                                    sprintf(buffer + strlen(buffer), "(%s)", name0type);
+                                    if (stat(buffer, statbuffer))
+                                    {
+                                        if (errno == ENOENT)
+                                        {
+                                            int l;
+#ifdef __WIN32__
+                                            l = mkdir(buffer);
+#else
+                                            l = mkdir(buffer, 777);
+#endif
+                                        }
+                                    }
+                                }
+                                else
+                                {
+    /* filecopy:*/
+                                    FILE * fps, * fpt;
+                                    fps = fopen(samplesourcename, "r");
+                                    if (fps)
+                                    {
+                                        sprintf(buffer + strlen(buffer), "/%s", samplefilename);
+                                        fpt = fopen(buffer, "w+r");
+                                        if (fpt)
+                                        {
+                                            long bytes = 0, bytet = 0;
+                                            while ((!feof(fps)) && (bytet == bytes))
+                                            {
+                                                bytes = fread(buffer0, 1, BUFFERSIZE, fps);
+                                                if (bytes)
+                                                {
+                                                    bytet = fwrite(buffer0, 1, bytes, fpt);
+                                                }
+                                            }
+                                            fclose(fpt);
+                                        }
+                                        fclose(fps);
+                                    }
+                                }
+    /* filecopy_end*/
+                                delete[] samplesourcename;
+                                samplesourcename = NULL;
+                            }
+                            delete[] samplefilename;
+                            samplefilename = NULL;
+                        }
+                        if (sampledirname)
+                        {
+                            delete[] sampledirname;
+                            sampledirname = NULL;
+                            samplefilenamez = 0;
+                        }
+                        if (name0deep)
+                        {
+                            if (p_addPICCtodir)
+                            {
+                                sprintf(sourcename, "%s", dirbuffer[dirbufferDeep + 1]);
+                                if (strlen(sourcename) > 1)
+                                {
+                                    sourcename[strlen(sourcename) - 1] = 0;
+                                }
+                                if (name0fcount != 1)
+                                {
+                                    sprintf(tempname, "%s%s(%s,%dpics)", dirbuffer[dirbufferDeep]
+                                    , name0, name0type, name0fcount);
+                                }
+                                else
+                                {
+                                    sprintf(tempname, "%s%s(%s,%dpic)", dirbuffer[dirbufferDeep]
+                                    , name0, name0type, name0fcount);
+                                }
+                                if (strlen(tempname))
+                                {
+                                    if (rename(sourcename, tempname))
+                                    {
+                                        printf("rename-error:\n");
+                                        printf("tn: %s\n", tempname);
+                                        printf("tn: %s\n", tempname);
+                                    }
+                                }
+                            }
+                        }
+                        name0deep = 0;
+                        name0fcount = 0;
+                    }
+                }
+            }
+            else
+            {
+                dirbufferDeep--;
+            }
+        }
+        while (dirbufferDeep > 0);
+        protoSubdirs();
+        checkANDstoreJPG("zzz");
+        checkANDstoreHTM("zzz");
  /*
  fp1 = fopen("dupli.STATUS", "w+r");
  if (fp1)
@@ -4047,86 +4016,54 @@ void CminerDlg::AddingDir()
  fclose(fp1);
  }
     */
-                    wxMutexGuiEnter();
-                    if (deep < 0)
-                    {
-                        deep = 0;
-                    }
-                    else
-                    {
-                        Message(92, "");
-                    }
-                    switch (sprache)
-                    {
-                    case 0:
-                        sprintf(buffer,
-                        " Unterverzeichnisse=%lu Dateien=%lu Markiert(.dup)=%lu Demarkiert=%lu Geloescht=%lu Verschoben=%lu Bytes=%lu\n",
-                        count_subdirsprocessed, count_ALLfiles, count_dupmarked, count_dupremoved
-                        , count_deleted, count_filesmoved, size_ALLfiles);
-                        tctrl_ARC -> AppendText(buffer);
-                        break;
-                    case 1:
-                        sprintf(buffer,
-                        " Subdirs=%lu Files=%lu DUPmarked=%lu DUPremoved=%lu Deleted=%lu Moved=%lu Bytes=%lu\n",
-                        count_subdirsprocessed, count_ALLfiles, count_dupmarked, count_dupremoved
-                        , count_deleted, count_filesmoved, size_ALLfiles);
-                        tctrl_ARC -> AppendText(buffer);
-                        break;
-                    }
-                    for (int i = 0 ; i <= 2 ; i++)
-                    {
-                        switch (i)
-                        {
-                        case 0:
-                            sprintf(buffer, "STD: %8ld    MET: %8ld\n"
-                            , count_STDfilesprocessed, count_METfilesprocessed);
-                            break;
-                        case 1:
-                            sprintf(buffer, "GIF: %8ld    JPG: %8ld    DKT: %8ld\n"
-                            , count_GIFfilesprocessed, count_JPGfilesprocessed, count_DKTfilesprocessed);
-                            break;
-                        case 2:
-                            sprintf(buffer, "HTM: %8ld    PRY: %8ld\n"
-                            , count_HTMfilesprocessed, count_PRYfilesprocessed);
-                            break;
-                        }
-                        tctrl_ARC -> AppendText(buffer);
-                    }
-                    wxMutexGuiLeave();
-                    if (samplefilename)
-                    {
-                        delete [] samplefilename;
-                        samplefilename = NULL;
-                    }
-                    if (samplesourcename)
-                    {
-                        delete [] samplesourcename;
-                        samplesourcename = NULL;
-                    }
-                    if (sampledirname)
-                    {
-                        delete [] sampledirname;
-                        sampledirname = NULL;
-                    }
-                    delete dbSM;
-                    dbSMmData.ptr = NULL;
-                    dbSMmData.size = 0;
-                    fclose(logfileFP);
-                }
-                delete dbTMP;
-                dbTMP = NULL;
-            }
-            delete dbUR;
-            dbUR = NULL;
+        wxMutexGuiEnter();
+        if (dirbufferDeep < 0)
+        {
+            dirbufferDeep = 0;
         }
-        delete dbVI;
-        dbVI = NULL;
+        else
+        {
+            Message(92, "");
+        }
+        switch (sprache)
+        {
+        case 0:
+            sprintf(buffer,
+            " Unterverzeichnisse=%lu Dateien=%lu Markiert(.dup)=%lu Demarkiert=%lu Geloescht=%lu Verschoben=%lu Bytes=%lu\n",
+            count_subdirsprocessed, count_ALLfiles, count_dupmarked, count_dupremoved
+            , count_deleted, count_filesmoved, size_ALLfiles);
+            tctrl_ARC -> AppendText(buffer);
+            break;
+        case 1:
+            sprintf(buffer,
+            " Subdirs=%lu Files=%lu DUPmarked=%lu DUPremoved=%lu Deleted=%lu Moved=%lu Bytes=%lu\n",
+            count_subdirsprocessed, count_ALLfiles, count_dupmarked, count_dupremoved
+            , count_deleted, count_filesmoved, size_ALLfiles);
+            tctrl_ARC -> AppendText(buffer);
+            break;
+        }
+        for (int i = 0 ; i <= 2 ; i++)
+        {
+            switch (i)
+            {
+            case 0:
+                sprintf(buffer, "STD: %8ld    MET: %8ld\n"
+                , count_STDfilesprocessed, count_METfilesprocessed);
+                break;
+            case 1:
+                sprintf(buffer, "GIF: %8ld    JPG: %8ld    DKT: %8ld\n"
+                , count_GIFfilesprocessed, count_JPGfilesprocessed, count_DKTfilesprocessed);
+                break;
+            case 2:
+                sprintf(buffer, "HTM: %8ld    PRY: %8ld\n"
+                , count_HTMfilesprocessed, count_PRYfilesprocessed);
+                break;
+            }
+            tctrl_ARC -> AppendText(buffer);
+        }
+        wxMutexGuiLeave();
     }
-    delete dbPI;
-    dbPI = NULL;
-    delete htmp0;
-    htmp0 = NULL;
-    fclose(fp_subdirs);
+    AddingDirEnd();
 }
 
 void CminerDlg::protoSubdirs()
@@ -4211,7 +4148,30 @@ void CminerDlg::storeUrls(char * url1, char * url2)
     }
 }
 
-void CminerDlg::Process_WD3file(char * filepath, char * filename)
+void CminerDlg::Process_DUPfile()
+{
+    if (p_removedupext)
+    {
+        int i;
+        strcpy(filenameTMP, sourcename);
+        i = strlen(filenameTMP);
+        while (i > 0)
+        {
+            if (filenameTMP[--i] == '.')
+            {
+                filenameTMP[i] = 0;
+                i = - i;
+            }
+        }
+        if (strcmp(filenameTMP, sourcename))
+        {
+            (void) rename(sourcename, filenameTMP);
+            count_dupremoved++;
+        }
+    }
+}
+
+void CminerDlg::Process_WD3file(char * filename)
 {
     count_WD3filesprocessed++;
     if (p_WD3deleteALL)
@@ -4220,7 +4180,7 @@ void CminerDlg::Process_WD3file(char * filepath, char * filename)
     }
 }
 
-void CminerDlg::Process_PRYfile(char * filepath, char * filename)
+void CminerDlg::Process_PRYfile(char * filename)
 {
     count_PRYfilesprocessed++;
     if (p_delPRYfiles)
@@ -4229,7 +4189,7 @@ void CminerDlg::Process_PRYfile(char * filepath, char * filename)
     }
 }
 
-void CminerDlg::Process_AVIfile(char * filepath, char * filename)
+void CminerDlg::Process_AVIfile(char * filename)
 {
     Cavifile * avifile = new Cavifile(filepath, filename);
     if (avifile -> getFilesize())
@@ -4373,7 +4333,7 @@ void CminerDlg::Process_VIDEOfile(char * filepath, char * filename)
     }
 }
 
-void CminerDlg::Process_HTMfile(char * filepath, char * filename)
+void CminerDlg::Process_HTMfile(char * filename)
 {
     count_HTMfilesprocessed++;
     if (p_HTMLaddMD4)
@@ -4524,11 +4484,12 @@ void CminerDlg::Process_HTMfile(char * filepath, char * filename)
                         link1 = strstr(htmp -> getHttpLinkPar(), "/");
                         if (link1)
                         {
-                            htmp -> mix2Urls(deep, urlnext, dirbuffer[deep - 1], link1);
+                            htmp -> mix2Urls(dirbufferDeep, urlnext, dirbuffer[dirbufferDeep], link1);
                         }
                         else
                         {
-                            htmp -> mix2Urls(deep, urlnext, dirbuffer[deep - 1], htmp -> getHttpLinkUrl());
+                            htmp -> mix2Urls(dirbufferDeep, urlnext, dirbuffer[dirbufferDeep]
+                            , htmp -> getHttpLinkUrl());
                         }
                         int p1 = 0;
                         l = strlen(urlnext);
@@ -4637,13 +4598,6 @@ void CminerDlg::checkANDstoreJPG(char * filepath)
                     sprintf(buffer, "<img src=\"http://%s\">pic%02d</img>\n"
                     , filepath + 1 + strlen(theApp -> sourcedirectory.c_str()), jpglinenumber);
                     fprintf(fp, buffer);
-                    if (strstr(buffer, "sextronic"))
-                    {
-                        sprintf(buffer, "debug:%s\n", sourcename);
-                        Wgui(buffer);
-                        sprintf(buffer, "====>:%s\n", filepath);
-                        Wgui(buffer);
-                    }
                 }
                 fclose(fp);
             }
@@ -4736,113 +4690,245 @@ void CminerDlg::Process_DKTfile(char * filepath, char * filename)
     }
 }
 
-void CminerDlg::Process_STDfile(char * filepath, char * filename)
+void CminerDlg::Process_PRTfile()
 {
-    int l, p1 = 0;
-    count_STDfilesprocessed++;
-    char * filepath2 = new char[strlen(filepath) + 1];
-    strcpy(filepath2, filepath);
-    bool itemhashedpointer = false;
-    name0fcount++;
-    strcpy(buffer, filename);
-    /*++++++++++++++++++++++++++++++changing source-filename&/position ++++++++++++++++*/
-    if (filetype == 7)
+    if (p_PRTcreateISM || p_PRTsearchMET)
     {
-        if ((p_doHDNsetting || p_moveLocation))
+        hash -> hashFile(sourcename, true, true);
+        if (p_PRTsearchMET)
         {
-            if (name0deep)
+            char temp[strlen(sourcename) + 5];
+            int htw = 0;
+            CMetfile * metfile = NULL;
+            int htp, pointer, s, z, completeCount = 0;
+            unsigned char * ht;
+            unsigned long partfileSize, start = 0, end = 0;
+            sprintf(temp, "%s.met", sourcename);
+            if (stat(temp, statbuffer))
             {
-                int nochange = 0;
-                if (p_doHDNsetting)
+                partfileSize = filesize;
+                htp = hash -> hashtableindex;
+                ht = (unsigned char *)(hash -> hashtable);
+                for (z = 0 ; z < htp ; z++)
                 {
-                    l = strlen(name0);
-                    if (!strncmp(filename, name0, l))
+                    start = z <<4;
+                    pointer = 0;
+                    for (s = 0 ; s < 16 ; s++)
                     {
-                        nochange = filecountTST(filename);
+                        if (s < 3)
+                        {
+                            if (ht[start + s] == 0xaa)
+                            {
+                                pointer++;
+                            }
+                        }
+                        else if(s > 12)
+                        {
+                            if (ht[start + s] == 0xcc)
+                            {
+                                pointer++;
+                            }
+                        }
                     }
-                    if (nochange)
+                    if (!pointer)
                     {
-                        printf("-->(%d)nochange(==%d) %s\n", name0fcount, nochange, filename);
-                    }
-                    else
-                    {
-                        //    printf("-->(%d)change   %s\n", name0fcount, filename);
+                        pointer = checkSubhash(ht + start, z);
+                        if (pointer)
+                        {
+                            partfileSize = atol(buffer + 2);
+                            completeCount++;
+                            if (!metfile)
+                            {
+                                metfile = new CMetfile();
+                                metfile -> Create(temp);
+                                metfile -> SetFilename(buffer + 15);
+                                metfile -> SetPartfilename(filename);
+                                metfile -> SetFilesize(partfileSize);
+                                metfile -> SetFilehash(dbSHkey.ptr);
+                                strcpy((char *) dbSHkey.ptr + 16, "hashtable");
+                                dbSHdata = dbSH -> fetchKey(1, dbSHkey);
+                                if (dbSHdata.ptr)
+                                {
+                                    htw++;
+                                    metfile -> SetHashtable(atoi((char *) dbSHdata.ptr), dbSHdata.ptr + 8);
+                                    free(dbSHdata.ptr);
+                                    dbSHdata.ptr = NULL;
+                                }
+                                metfile -> ClearGaplist();
+                                metfile -> AddGap(0, partfileSize);
+                            }
+                            start = z * 9728000;
+                            end = start + 9728000;
+                            if (end > partfileSize)
+                            {
+                                end = partfileSize;
+                            }
+                            metfile -> FillGap(start, end);
+                        }
                     }
                 }
-                if (!nochange)
+                if (metfile)
                 {
+                    metfile -> WriteTo();
+                    delete metfile;
+                }
+            }
+        }
+        if (p_PRTcreateISM)
+        {
+            sprintf(tempname, "%s%s.ism", filepath, filename);
+            CreateInfofile(tempname, filepath, filename);
+        }
+    }
+    if (p_PRTcreateOVN)
+    {
+        sub_PRTcreateOVN();
+    }
+}
+
+void CminerDlg::Process_STDfile(char * filename)
+{
+    if (p_STDparse)
+    {
+        int l = 0, p1 = 0;
+        count_STDfilesprocessed++;
+        if (p_ISMparse)
+        {
+            if (p_ISMdeleteDUP)
+            {
+                l = CheckDatabaseISM((unsigned char *)hash -> blockhash);
+            }
+        }
+        if (!l)
+        {
+            strcpy(filepathTMP, dirbuffer[dirbufferDeep]);
+            bool itemhashedpointer = false;
+            name0fcount++;
+            strcpy(buffer, filename);
+    /*++++++++++++++++++++++++++++++changing source-filename&/position ++++++++++++++++*/
+            if (filetype == 7)
+            {
+                if ((p_doHDNsetting || p_moveLocation))
+                {
+                    if (name0deep)
+                    {
+                        int nochange = 0;
+                        if (p_doHDNsetting)
+                        {
+                            l = strlen(name0);
+                            if (!strncmp(filename, name0, l))
+                            {
+                                nochange = filecountTST(filename);
+                            }
+                            if (nochange)
+                            {
+                                printf("-->(%d)nochange(==%d) %s\n", name0fcount, nochange, filename);
+                            }
+                            else
+                            {
+                                //    printf("-->(%d)change   %s\n", name0fcount, filename);
+                            }
+                        }
+                        if (!nochange)
+                        {
     /* filename zu aendern, da noch bislang ohne nummer: */
-                    if (p_moveLocation)
-                    {
-                        strcpy(filepath2, dirbuffer[name0deep]);
-                    }
-                    if (p_doHDNsetting)
-                    {
-                        do
-                        {
-                            name0count++;
-                            switch (filetype)
+                            if (p_moveLocation)
                             {
-                            case 7:
-                                //picfile
-                                sprintf(buffer, "%s.%08d.jpg", name0, name0count);
-                                sprintf(tempname, "%s%s", filepath2, buffer);
-                                break;
-                            default:
-                                sprintf(buffer, "%s.%08d.???", name0, name0count);
-                                sprintf(tempname, "%s%s", filepath2, buffer);
-                                break;
+                                strcpy(filepathTMP, dirbuffer[name0deep]);
                             }
-                            nochange = 0;
-                            if (!stat(tempname, statbuffer))
+                            if (p_doHDNsetting)
                             {
-                                printf("file exists: %s\n", tempname);
-                                nochange = 1;
+                                do
+                                {
+                                    name0count++;
+                                    switch (filetype)
+                                    {
+                                    case 7:
+                                        //picfile
+                                        sprintf(buffer, "%s.%08d.jpg", name0, name0count);
+                                        sprintf(tempname, "%s%s", filepathTMP, buffer);
+                                        break;
+                                    default:
+                                        sprintf(buffer, "%s.%08d.???", name0, name0count);
+                                        sprintf(tempname, "%s%s", filepathTMP, buffer);
+                                        break;
+                                    }
+                                    nochange = 0;
+                                    if (!stat(tempname, statbuffer))
+                                    {
+                                        printf("file exists: %s\n", tempname);
+                                        nochange = 1;
+                                    }
+                                }
+                                while (nochange);
                             }
-                        }
-                        while (nochange);
-                    }
-                    else
-                    {
-                        sprintf(tempname, "%s%s", filepath2, filename);
-                        if (!strcmp(tempname, sourcename))
-                        {
-                            nochange = 1;
-                        }
-                        else
-                        {
-                            nochange = 0;
-                            if (!stat(tempname, statbuffer))
+                            else
                             {
-                                printf("file exists: %s\n", tempname);
-                                nochange = 1;
+                                sprintf(tempname, "%s%s", filepathTMP, filename);
+                                if (!strcmp(tempname, sourcename))
+                                {
+                                    nochange = 1;
+                                }
+                                else
+                                {
+                                    nochange = 0;
+                                    if (!stat(tempname, statbuffer))
+                                    {
+                                        printf("file exists: %s\n", tempname);
+                                        nochange = 1;
+                                    }
+                                }
                             }
-                        }
-                    }
-                    if (!nochange)
-                    {
-                        if (!rename(sourcename, tempname))
-                        {
-                            sprintf(filename, "%s.jpg", buffer);
-                            strcpy(sourcename, tempname);
+                            if (!nochange)
+                            {
+                                if (!rename(sourcename, tempname))
+                                {
+                                    sprintf(filename, "%s.jpg", buffer);
+                                    strcpy(sourcename, tempname);
+                                }
+                            }
                         }
                     }
                 }
             }
-        }
-    }
     /*++++++++++++++++++++++++++++++end of changing source-filename&/position ++++++++++++++++*/
-    if ((p_createsample) && (!p_partfilesonly))
-    {
-        if (samplefilenamez < 2)
-        {
-            if (!p_ignorexfiles)
+            if (p_createsample)
             {
-                for (unsigned int i = 0 ; i < strlen(filename) ; i++)
+                if (samplefilenamez < 2)
                 {
-                    if (filename[i] == '.')
+                    if (!p_ignorexfiles)
                     {
-                        if (filename[i + 1] == 'x')
+                        for (unsigned int i = 0 ; i < strlen(filename) ; i++)
+                        {
+                            if (filename[i] == '.')
+                            {
+                                if (filename[i + 1] == 'x')
+                                {
+                                    if (samplefilename)
+                                    {
+                                        delete[] samplefilename;
+                                    }
+                                    if (samplesourcename)
+                                    {
+                                        delete[] samplesourcename;
+                                    }
+                                    samplesourcename = new char[strlen(sourcename) + 1];
+                                    samplefilename = new char[strlen(filename) + 8];
+                                    strcpy(samplesourcename, sourcename);
+                                    strcpy(samplefilename, filename);
+                                    if (strlen(samplefilename) > 3)
+                                    {
+                                        sprintf(samplefilename + strlen(samplefilename) - 3, "%04x.jpg", samplerand);
+                                    }
+                                    samplefilenamez = 2;
+                                    i += 1000;
+                                }
+                            }
+                        }
+                    }
+                    if (samplefilenamez < 2)
+                    {
+                        if ((rand() % name0fcount) <= 1)
                         {
                             if (samplefilename)
                             {
@@ -4860,66 +4946,40 @@ void CminerDlg::Process_STDfile(char * filepath, char * filename)
                             {
                                 sprintf(samplefilename + strlen(samplefilename) - 3, "%04x.jpg", samplerand);
                             }
-                            samplefilenamez = 2;
-                            i += 1000;
+                            samplefilenamez = 1;
                         }
                     }
                 }
             }
-            if (samplefilenamez < 2)
+            sprintf(buffer, "%12lu", filesize);
+            p1 = 0;
+            while (p1 < 12)
             {
-                if ((rand() % name0fcount) <= 1)
+                switch (buffer[p1])
                 {
-                    if (samplefilename)
-                    {
-                        delete[] samplefilename;
-                    }
-                    if (samplesourcename)
-                    {
-                        delete[] samplesourcename;
-                    }
-                    samplesourcename = new char[strlen(sourcename) + 1];
-                    samplefilename = new char[strlen(filename) + 8];
-                    strcpy(samplesourcename, sourcename);
-                    strcpy(samplefilename, filename);
-                    if (strlen(samplefilename) > 3)
-                    {
-                        sprintf(samplefilename + strlen(samplefilename) - 3, "%04x.jpg", samplerand);
-                    }
-                    samplefilenamez = 1;
+                case 32:
+                    buffer[p1] = '0';
+                    break;
                 }
+                p1++;
             }
-        }
-    }
-    sprintf(buffer, "%12lu", filesize);
-    p1 = 0;
-    while (p1 < 12)
-    {
-        switch (buffer[p1])
-        {
-        case 32:
-            buffer[p1] = '0';
-            break;
-        }
-        p1++;
-    }
-    sprintf(buffer + 12, "%s", filename);
-    if (p_doMD4hashing)
-    {
-        hash -> hashFile(sourcename, p_doMD4fakechk, p_ED2KhashMD4);
-        itemhashedpointer = true;
-        int i;
-        if (p_doMD4fakechk)
-        {
-            if (hash -> IsFake())
+            sprintf(buffer + 12, "%s", filename);
+            if (p_doMD4hashing)
             {
-                printf("This file looks like a fake: %s\n", sourcename);
-            }
-            else
-            {
-                printf("This file looks OK         : %s\n", sourcename);
-            }
-        }
+                hash -> hashFile(sourcename, p_doMD4fakechk, p_ED2KhashMD4);
+                itemhashedpointer = true;
+                int i;
+                if (p_doMD4fakechk)
+                {
+                    if (hash -> IsFake())
+                    {
+                        printf("This file looks like a fake: %s\n", sourcename);
+                    }
+                    else
+                    {
+                        printf("This file looks OK         : %s\n", sourcename);
+                    }
+                }
  /*
  RenameNF(sourcename, true);
  for (i = 0 ; i < 16 ; i++)
@@ -4939,172 +4999,422 @@ void CminerDlg::Process_STDfile(char * filepath, char * filename)
  else
  {
     */
-        for (i = 0 ; i < 16 ; i++)
-        {
-            sprintf(keybuffer + i * 2, "%02x", ((unsigned char *) hash -> blockhash) [i]);
-        }
-        AddHashToSourcename(sourcename, p_addMD4tofnam);
-        if (strlen(sourcename) > strlen(theApp -> sourcedirectory.c_str()))
-        {
-            sprintf(databuffer, "%12lu:%s", filesize,
-            sourcename + strlen(theApp -> sourcedirectory.c_str()) + 1);
-        }
-        else
-        {
-            sprintf(databuffer, "%12lu:%s", filesize, sourcename);
-        }
-        if (CheckDatabase(keybuffer, databuffer, true))
-        {
-            //hashkey existiert
-            RenameNF(sourcename, false);
-            free(dbSMmResult.ptr);
-            dbSMmResult.ptr = NULL;
-        }
+                if (p_useCOKEY)
+                {
+                    for (i = 0 ; i < 16 ; i++)
+                    {
+                        if (i < 8)
+                        {
+                            sprintf(keybuffer + i * 2, "%02x", ((unsigned char *) hash -> blockhash) [i + 8]);
+                        }
+                        else
+                        {
+                            sprintf(keybuffer + i * 2, "%02x", ((unsigned char *) hash -> blockhash) [i - 8]);
+                        }
+                    }
+                }
+                else
+                {
+                    for (i = 0 ; i < 16 ; i++)
+                    {
+                        sprintf(keybuffer + i * 2, "%02x", ((unsigned char *) hash -> blockhash) [i]);
+                    }
+                }
+                AddHashToSourcename(sourcename, p_addMD4tofnam);
+                if (strlen(sourcename) > strlen(theApp -> sourcedirectory.c_str()))
+                {
+                    sprintf(databuffer, "%12lu:%s", filesize,
+                    sourcename + strlen(theApp -> sourcedirectory.c_str()) + 1);
+                }
+                else
+                {
+                    sprintf(databuffer, "%12lu:%s", filesize, sourcename);
+                }
+                if (CheckDatabase(keybuffer, databuffer, true))
+                {
+                    //hashkey existiert
+                    RenameNF(sourcename, false);
+                    free(dbSMresult.ptr);
+                    dbSMresult.ptr = NULL;
+                }
  /*
  }
     */
-        if (p_partfilesonly)
-        {
-            if (p_creInfForPart)
-            {
-                sprintf(tempname, "%s%s.ism", filepath2, filename);
-                CreateInfofile(tempname, filepath2, filename);
+                if (p_STDcreateINF)
+                {
+                    sprintf(tempname, "%s%s.ism", filepathTMP, filename);
+                    CreateInfofile(tempname, filepathTMP, filename);
+                }
+                if (p_STDcreateMET)
+                {
+                    sprintf(tempname, "%s%s.met", filepathTMP, filename);
+                    Create_METfile(tempname, filepathTMP, filename);
+                }
             }
-            if (p_cNewED2Kparts)
+            else
             {
-                sprintf(tempname, "%s%s.ovn", filepath2, filename);
-                if (stat(tempname, statbuffer))
+                itemhashedpointer = false;
+            }
+            sprintf(tempname, "%s/", theApp -> targetdirectory.c_str());
+            if (p_usingdirfile && (hash -> hashtableindex > 1))
+            {
+                p1 = strlen(tempname);
+                for (int i = 0 ; i < 12 ; i++)
                 {
-                    if (errno == ENOENT)
+                    tempname[p1++] = buffer[i];
+                    switch (i)
                     {
-                        int l;
-#ifdef __WIN32__
-                        l = mkdir(tempname);
-#else
-                        l = mkdir(tempname, 777);
-#endif
-                    }
-                }
-    /* filecopy:*/
-                unsigned int i = 1;
-                char partid[strlen(filename) + 1];
-                while (i < strlen(filename))
-                {
-                    if (filename[i] == '.')
-                    {
-                        memcpy(partid, filename, i);
-                        partid[i] = 0;
-                        i += 1000;
-                    }
-                    else
-                    {
-                        ++i;
-                    }
-                }
-                FILE * fps, * fpt;
-                sprintf(buffer, "%s%s", filepath2, filename);
-                fps = fopen(buffer, "r");
-                if (fps)
-                {
-                    int i = 0, bytes = 0, bytet = 0;
-                    unsigned char * ht;
-                    ht = hash -> hashtable;
-                    while (!feof(fps))
-                    {
-                        if ((ht[i * 16] != 0xaa) || (ht[i * 16 + 8] != 0xcc))
+                    case 2:
+                    case 5:
+                    case 8:
+                    case 11:
+                        tempname[p1] = 0;
+                        if (stat(tempname, statbuffer))
                         {
-                            ++i;
-                            sprintf(tempname, "%s%s.ovn/%s.%d.part", filepath2, filename, partid, i);
-                            fpt = fopen(tempname, "w+r");
-                            if (fpt)
+                            if (errno == ENOENT)
                             {
-                                bytet = 9728000;
-                                while ((!feof(fps)) && bytet)
+#ifdef __WIN32__
+                                l = mkdir(tempname);
+#else
+                                l = mkdir(tempname, 777);
+#endif
+                            }
+                        }
+                        tempname[p1++] = '/';
+                        break;
+                    }
+                }
+                sprintf(tempname + p1, "%s", filename);
+            }
+            if (p_usingdirfile && (hash -> hashtableindex > 1))
+            {
+                WriteDirfile(tempname, itemhashedpointer);
+            }
+            processcount++;
+        }
+    }
+}
+
+void CminerDlg::sub_PRTcreateOVN()
+{
+    int l = 0, i = 0;
+    sprintf(tempname, "%s%s.ovn", filepath, filename);
+    /* filecopy:*/
+    l = strlen(filename);
+    char partid[l + 1];
+    strcpy(partid, filename);
+    i = 0;
+    while (i < l)
+    {
+        if (partid[i] == '.')
+        {
+            if (i == (l - 5))
+            {
+                partid[i] = 0;
+            }
+            else
+            {
+                i = 0;
+            }
+            l = - l;
+        }
+        else
+        {
+            i++;
+        }
+    }
+    if (i)
+    {
+        if (stat(tempname, statbuffer))
+        {
+            if (errno == ENOENT)
+            {
+#ifdef __WIN32__
+                (void) mkdir(tempname);
+#else
+                (void) mkdir(tempname, 777);
+#endif
+            }
+        }
+        FILE * fps, * fpt;
+        fps = fopen(sourcename, "r");
+        if (fps)
+        {
+            int bytes = 0, bytet = 0;
+            i = 0;
+            while (!feof(fps))
+            {
+                ++i;
+                sprintf(tempname, "%s%s.ovn/%s.%d.part", filepath, filename, partid, i);
+                fpt = fopen(tempname, "w+");
+                if (fpt)
+                {
+                    bytet = 9728000;
+                    while ((!feof(fps)) && bytet)
+                    {
+                        if (bytet > BUFFERSIZE)
+                        {
+                            bytes = fread(buffer0, 1, BUFFERSIZE, fps);
+                        }
+                        else
+                        {
+                            bytes = fread(buffer0, 1, bytet, fps);
+                        }
+                        bytet -= bytes;
+                        if (bytes)
+                        {
+                            bytes = fwrite(buffer0, 1, bytes, fpt);
+                        }
+                    }
+                    fclose(fpt);
+                }
+            }
+            fclose(fps);
+        }
+    }
+    /* filecopy_end*/
+}
+
+void CminerDlg::sub_METimportMD4()
+{
+    unsigned long start;
+    unsigned int htp, i;
+    unsigned char * ht;
+    htp = mfile -> parts;
+    ht = mfile -> parts_hashtable;
+    sprintf(buffer, "1_%12lu_%s", mfile -> mf_filesize, mfile -> mf_filename);
+    if (htp)
+    {
+        Cmd4hash * ismHash = new Cmd4hash();
+        (void) ismHash -> hashBuffer(ht, htp << 4, true);
+        storeSubhash(0, NULL, (unsigned char *) ismHash -> blockhash, buffer);
+        strcpy((char *) dbSHkey.ptr + 16, "hashtable");
+        dbSHdata = dbSH -> fetchKey(1, dbSHkey);
+        if (!dbSHdata.ptr)
+        {
+            dbSHdata.size = 8 + (htp << 4);
+            dbSHdata.ptr = (unsigned char *) malloc(dbSHdata.size + 1);
+            memset(dbSHdata.ptr, 0, dbSHdata.size + 1);
+            sprintf((char *) dbSHdata.ptr, "%7d", htp);
+            memcpy(dbSHdata.ptr + 8, ht, htp << 4);
+            (void) dbSH -> storeData(1, dbSHkey, dbSHdata);
+        }
+        free(dbSHdata.ptr);
+        dbSHdata.ptr = NULL;
+        for (i = 0 ; i < htp ; i++)
+        {
+            start = i <<4;
+            sprintf(buffer, "5_%d", i);
+            storeSubhash(1, ht + start, (unsigned char *) ismHash -> blockhash, buffer);
+        }
+        delete ismHash;
+    }
+    else
+    {
+        unsigned char blockhash[17];
+        from32to16(mfile -> mf_filehash, blockhash);
+        storeSubhash(0, NULL, blockhash, buffer);
+    }
+}
+
+void CminerDlg::sub_ISMimportMD4()
+{
+    int p = 0, bytecount = 0, b;
+    int mode = 0;
+    unsigned long start;
+    char * bufferp = NULL;
+    char * ismFilename = NULL;
+    char * ismFilepath = NULL;
+    char ismFilehash[33];
+    memset(ismFilehash, 0, 33);
+    unsigned long ismFilesize = 0;
+    unsigned char * ismHashtable = NULL;
+    unsigned long htp = 0;
+    FILE * fp = fopen(sourcename, "r");
+    if (fp)
+    {
+        while (!feof(fp))
+        {
+            b = fgetc(fp);
+            if (b >= 0)
+            {
+                bytecount++;
+                switch (b)
+                {
+                case 10:
+                case 13:
+                    if (p > 0)
+                    {
+                        p = - p;
+                    }
+                    break;
+                case 9:
+                case 32:
+                    if (p)
+                    {
+                        buffer[p++] = b;
+                    }
+                    break;
+                default:
+                    buffer[p++] = b;
+                    break;
+                }
+                if (p > 0)
+                {
+                    if (bytecount >= statbuffer -> st_size)
+                    {
+                        p = - p;
+                    }
+                }
+                if (p < 0)
+                {
+                    p = - p;
+                    buffer[p] = 0;
+                    if (!strncmp(buffer, "Filename  : ", 12))
+                    {
+                        ismFilename = (char *) malloc(strlen(buffer) - 11);
+                        strcpy(ismFilename, buffer + 12);
+                        //printf("Filename:%s\n", ismFilename);
+                    }
+                    else if(!strncmp(buffer, "Filepath  : ", 12))
+                    {
+                        ismFilepath = (char *) malloc(strlen(buffer) - 11);
+                        strcpy(ismFilepath, buffer + 12);
+                        //printf("Filepath:%s\n", ismFilepath);
+                    }
+                    else if(!strncmp(buffer, "MD4Hash   : ", 12))
+                    {
+                        memset(ismFilehash, 0, 33);
+                        strncpy(ismFilehash, buffer + 12, 32);
+                        //printf("Filehash:%s\n", ismFilehash);
+                    }
+                    else if(!strncmp(buffer, "Filesize  : ", 12))
+                    {
+                        ismFilesize = atol(buffer + 12);
+                        htp = ismFilesize + 9727999;
+                        htp/= 9728000;
+                        ismHashtable = (unsigned char *) malloc(htp * 16 + 32);
+                        memset(ismHashtable, 0, htp * 16 + 32);
+                        //printf("Filesize:%lu Index:%lu\n", ismFilesize, htp);
+                    }
+                    else if(!strncmp(buffer, "Hashtable :", 11))
+                    {
+                        mode = 1;
+                        //printf("hashtable follows(%d)\n", mode);
+                    }
+                    else if(mode == 1)
+                    {
+                        if ((buffer[0] >= '0') && (buffer[0] <= '9'))
+                        {
+                            if (htp)
+                            {
+                                bufferp = strstr((char *) buffer, ":");
+                                if (bufferp)
                                 {
-                                    bytes = fread(buffer0, 1, BUFFERSIZE, fps);
-                                    bytet -= bytes;
-                                    if (bytes)
+                                    start = atol(buffer) / 9728000;
+                                    if (start < htp)
                                     {
-                                        bytes = fwrite(buffer0, 1, bytes, fpt);
+                                        start <<= 4;
+                                        bufferp += 2;
+                                        from32to16(bufferp, ismHashtable + start);
                                     }
                                 }
-                                fclose(fpt);
                             }
                         }
                         else
                         {
-                            ++i;
-                            bytet = 9728000;
-                            while ((!feof(fps)) && bytet)
-                            {
-                                bytes = fread(buffer0, 1, BUFFERSIZE, fps);
-                                bytet -= bytes;
-                            }
+                            mode = 0;
                         }
                     }
-                    fclose(fps);
+                    p = 0;
+                    buffer[p] = 0;
                 }
-    /* filecopy_end*/
             }
         }
-        else if(p_creInfForAll)
+        fclose(fp);
+        unsigned char * ht;
+        ht = ismHashtable;
+        bufferp = strstr(ismFilepath, "id");
+        if (bufferp)
         {
-            sprintf(tempname, "%s%s.ism", filepath2, filename);
-            CreateInfofile(tempname, filepath2, filename);
+            bufferp = strstr(ismFilepath, "0");
         }
-        if (p_creMetForAll)
+        if (bufferp)
         {
-            sprintf(tempname, "%s%s.met", filepath2, filename);
-            CreateMetfile(tempname, filepath2, filename);
+            sprintf(buffer, "2_%12lu_%s", ismFilesize, ismFilename);
         }
-    }
-    else
-    {
-        itemhashedpointer = false;
-    }
-    sprintf(tempname, "%s/", theApp -> targetdirectory.c_str());
-    if (p_usingdirfile && (hash -> hashtableindex > 1))
-    {
-        p1 = strlen(tempname);
-        for (int i = 0 ; i < 12 ; i++)
+        else
         {
-            tempname[p1++] = buffer[i];
-            switch (i)
+            sprintf(buffer, "4_%12lu_%s", ismFilesize, ismFilename);
+        }
+        if (htp)
+        {
+            Cmd4hash * ismHash = new Cmd4hash();
+            (void) ismHash -> hashBuffer(ht, htp << 4, true);
+            storeSubhash(0, NULL, (unsigned char *) ismHash -> blockhash, buffer);
+            strcpy((char *) dbSHkey.ptr + 16, "hashtable");
+            dbSHdata = dbSH -> fetchKey(1, dbSHkey);
+            if (!dbSHdata.ptr)
             {
-            case 2:
-            case 5:
-            case 8:
-            case 11:
-                tempname[p1] = 0;
-                if (stat(tempname, statbuffer))
-                {
-                    if (errno == ENOENT)
-                    {
-#ifdef __WIN32__
-                        l = mkdir(tempname);
-#else
-                        l = mkdir(tempname, 777);
-#endif
-                    }
-                }
-                tempname[p1++] = '/';
-                break;
+                dbSHdata.size = 8 + (htp << 4);
+                dbSHdata.ptr = (unsigned char *) malloc(dbSHdata.size + 1);
+                memset(dbSHdata.ptr, 0, dbSHdata.size + 1);
+                sprintf((char *) dbSHdata.ptr, "%7ld", htp);
+                memcpy(dbSHdata.ptr + 8, ht, htp << 4);
+                (void) dbSH -> storeData(1, dbSHkey, dbSHdata);
             }
+            free(dbSHdata.ptr);
+            dbSHdata.ptr = NULL;
+            for (unsigned int i = 0 ; i < htp ; i++)
+            {
+                start = i <<4;
+                if (bufferp)
+                {
+                    sprintf(buffer, "6_%d", i);
+                    storeSubhash(1, ht + start, (unsigned char *) ismHash -> blockhash, buffer);
+                }
+                else
+                {
+                    sprintf(buffer, "8_%d", i);
+                    storeSubhash(1, ht + start, (unsigned char *) ismHash -> blockhash, buffer);
+                }
+            }
+            delete ismHash;
         }
-        sprintf(tempname + p1, "%s", filename);
+        else
+        {
+            unsigned char blockhash[17];
+            from32to16(ismFilehash, blockhash);
+            storeSubhash(0, NULL, blockhash, buffer);
+        }
     }
-    if (p_usingdirfile && (hash -> hashtableindex > 1))
+    if (ismFilename)
     {
-        WriteDirfile(tempname, itemhashedpointer);
+        free(ismFilename);
     }
-    processcount++;
-    delete [] filepath2;
+    if (ismFilepath)
+    {
+        free(ismFilepath);
+    }
+    if (ismHashtable)
+    {
+        free(ismHashtable);
+    }
 }
 
-void CminerDlg::Process_METfile(char * filepath, char * filename)
+void CminerDlg::Process_ISMfile()
+{
+    if (p_ISMimportMD4)
+    {
+        sub_ISMimportMD4();
+    }
+}
+
+void CminerDlg::Process_METfile(char * filename)
 {
     int ft = 0;
     char * fext = NULL;
+    strcpy(filepath, dirbuffer[dirbufferDeep]);
     count_METfilesprocessed++;
     mfile = new CMetfile(filepath, filename);
     if (mfile -> mf_filename)
@@ -5112,6 +5422,10 @@ void CminerDlg::Process_METfile(char * filepath, char * filename)
         (void) htmp0 -> GetFiletype(mfile -> mf_filename);
         char * ftp = NULL;
         fext = htmp0 -> GetExtension();
+        if (p_METimportMD4)
+        {
+            sub_METimportMD4();
+        }
         if (p_METcleanuTYP)
         {
             ftp = strstr(fTypes, fext);
@@ -5161,18 +5475,20 @@ void CminerDlg::Process_METfile(char * filepath, char * filename)
             if (CheckDatabase(keybuffer, databuffer, true))
             {
                 //duplikat
-                //strcmp(databuffer, (char *) dbSMmResult.ptr)):
-                if (0)
+                //strcmp(databuffer, (char *) dbSMresult.ptr)):
+                if (p_debugonoff)
                 {
-                    sprintf(buffer, "\nDuplikate %lu: ", count_STDfilesprocessed);
-                    Wgui(buffer);
-                    //tctrl_ARC -> AppendText(filepath);
-                    tctrl_ARC -> AppendText(filename);
-                    //tctrl_ARC -> AppendText(mfile->mf_partfile);
-                    tctrl_ARC -> AppendText(" >> ");
-                    tctrl_ARC -> AppendText(mfile -> mf_filename);
-                    sprintf(buffer, " %lu Bytes %s\n", mfile -> mf_filesize, keybuffer);
-                    tctrl_ARC -> AppendText(buffer);
+ /*
+ sprintf(buffer, "\nDuplikate %lu: ", count_STDfilesprocessed);
+ Wgui(buffer);
+ tctrl_ARC -> AppendText(filepath);
+ tctrl_ARC -> AppendText(filename);
+ tctrl_ARC -> AppendText(mfile->mf_partfile);
+ tctrl_ARC -> AppendText(" >> ");
+ tctrl_ARC -> AppendText(mfile -> mf_filename);
+ sprintf(buffer, " %lu Bytes %s\n", mfile -> mf_filesize, keybuffer);
+ tctrl_ARC -> AppendText(buffer);
+    */
                 }
                 if (p_logduples || p_markupduples)
                 {
@@ -5180,17 +5496,21 @@ void CminerDlg::Process_METfile(char * filepath, char * filename)
                 }
                 strcpy(tempname, sourcename);
                 sprintf(tempname + strlen(tempname) - 4, "(%lu)%s.dup.ism", mfile -> mf_filesize, mfile -> mf_filename);
-                free(dbSMmResult.ptr);
-                dbSMmResult.ptr = NULL;
+                free(dbSMresult.ptr);
+                dbSMresult.ptr = NULL;
             }
             else
             {
                 strcpy(tempname, sourcename);
                 sprintf(tempname + strlen(tempname) - 4, "(%lu)%s.ism", mfile -> mf_filesize, mfile -> mf_filename);
             }
-            if (p_METcreateINF)
+            if (p_METcreateISM)
             {
-                CreateInfofileMET(tempname, filepath, filename);
+                Create_ISMfile(tempname, filepath, filename);
+            }
+            if (p_METrepairPRT)
+            {
+                Repair_METfile();
             }
             strcpy(tempname, sourcename);
             tempname[strlen(tempname) - 4] = 0;
@@ -5413,10 +5733,10 @@ void CminerDlg::RenameNF(char * sourcename, bool fakeorduple)
     bool itemfoundpointer = false;
     int dbl, mrl;
     dbl = strlen(databuffer);
-    mrl = strlen((char *) dbSMmResult.ptr);
+    mrl = strlen((char *) dbSMresult.ptr);
     if (dbl == mrl)
     {
-        if (!strcmp(databuffer, (char *) dbSMmResult.ptr))
+        if (!strcmp(databuffer, (char *) dbSMresult.ptr))
         {
             itemfoundpointer = true;
         }
@@ -5425,7 +5745,7 @@ void CminerDlg::RenameNF(char * sourcename, bool fakeorduple)
     {
         while (mrl > 0)
         {
-            if (dbSMmResult.ptr[mrl] == '.')
+            if (dbSMresult.ptr[mrl] == '.')
             {
                 mrl = - mrl;
             }
@@ -5437,11 +5757,24 @@ void CminerDlg::RenameNF(char * sourcename, bool fakeorduple)
         if (mrl < 0)
         {
             mrl = - mrl;
-            if (!strncmp(databuffer, (char *) dbSMmResult.ptr, mrl))
+            if (!strncmp(databuffer, (char *) dbSMresult.ptr, mrl))
             {
-                if (!strncmp(keybuffer, databuffer + mrl + 1, 32))
+                if (p_useCOKEY)
                 {
-                    itemfoundpointer = true;
+                    if (!strncmp(keybuffer, databuffer + mrl + 17, 16))
+                    {
+                        if (!strncmp(keybuffer + 16, databuffer + mrl + 1, 16))
+                        {
+                            itemfoundpointer = true;
+                        }
+                    }
+                }
+                else
+                {
+                    if (!strncmp(keybuffer, databuffer + mrl + 1, 32))
+                    {
+                        itemfoundpointer = true;
+                    }
                 }
             }
         }
@@ -5450,7 +5783,7 @@ void CminerDlg::RenameNF(char * sourcename, bool fakeorduple)
     {
         while (dbl > 0)
         {
-            if (dbSMmResult.ptr[dbl] == '.')
+            if (dbSMresult.ptr[dbl] == '.')
             {
                 dbl = - dbl;
             }
@@ -5462,11 +5795,24 @@ void CminerDlg::RenameNF(char * sourcename, bool fakeorduple)
         if (dbl < 0)
         {
             dbl = - dbl;
-            if (!strncmp(databuffer, (char *) dbSMmResult.ptr, dbl))
+            if (!strncmp(databuffer, (char *) dbSMresult.ptr, dbl))
             {
-                if (!strncmp(keybuffer, (char *)(dbSMmResult.ptr + dbl + 1), 32))
+                if (p_useCOKEY)
                 {
-                    itemfoundpointer = true;
+                    if (!strncmp(keybuffer, (char *)(dbSMresult.ptr + dbl + 17), 16))
+                    {
+                        if (!strncmp(keybuffer + 16, (char *)(dbSMresult.ptr + dbl + 1), 16))
+                        {
+                            itemfoundpointer = true;
+                        }
+                    }
+                }
+                else
+                {
+                    if (!strncmp(keybuffer, (char *)(dbSMresult.ptr + dbl + 1), 32))
+                    {
+                        itemfoundpointer = true;
+                    }
                 }
             }
         }
@@ -5487,7 +5833,7 @@ void CminerDlg::RenameNF(char * sourcename, bool fakeorduple)
             {
                 count_duplogged++;
                 fprintf(logfileFP, "---%ld---\n", count_duplogged);
-                fprintf(logfileFP, "Original : %s\r\n", dbSMmResult.ptr);
+                fprintf(logfileFP, "Original : %s\r\n", dbSMresult.ptr);
                 fprintf(logfileFP, "Duplikat : %s\r\n", databuffer);
             }
             if (p_markupduples)
@@ -5511,6 +5857,25 @@ void CminerDlg::RenameNF(char * sourcename, bool fakeorduple)
     }
 }
 
+int CminerDlg::CheckDatabaseISM(unsigned char * md4hash)
+{
+    int retcode = 0;
+    memset(dbSHkey.ptr, 0, 33);
+    memcpy(dbSHkey.ptr, md4hash, 16);
+    dbSHdata = dbSH -> fetchKey(1, dbSHkey);
+    if (dbSHdata.ptr)
+    {
+        if (dbSHdata.ptr[0] == '2')
+        {
+            retcode++;
+printf("dup-delete:%s\n",(char*)dbSHdata.ptr);
+        }
+        free(dbSHdata.ptr);
+        dbSHdata.ptr = NULL;
+    }
+    return retcode;
+}
+
 char * CminerDlg::CheckDatabase(char * keybuffer, char * databuffer, bool tostore)
 {
     int p1;
@@ -5526,22 +5891,22 @@ char * CminerDlg::CheckDatabase(char * keybuffer, char * databuffer, bool tostor
         }
         p1++;
     }
-    from32to16(keybuffer, dbSMmKey.ptr);
-    dbSMmResult = dbSM -> fetchKey(1, dbSMmKey);
+    from32to16(keybuffer, dbSMkey.ptr);
+    dbSMresult = dbSM -> fetchKey(1, dbSMkey);
     if (tostore)
     {
-        if (!dbSMmResult.ptr)
+        if (!dbSMresult.ptr)
         {
             tempData.ptr = (unsigned char *) databuffer;
             tempData.size = strlen(databuffer) + 1;
             if (p_creDBentry)
             {
-                (void) dbSM -> storeData(1, dbSMmKey, tempData);
+                (void) dbSM -> storeData(1, dbSMkey, tempData);
                 dbfilecount++;
             }
         }
     }
-    return(char *) dbSMmResult.ptr;
+    return(char *) dbSMresult.ptr;
 }
 
 void CminerDlg::CreateInfofile(const char * infofilename, const char * filepath, const char * filename)
@@ -5633,7 +5998,7 @@ void CminerDlg::CreateInfofile(const char * infofilename, const char * filepath,
     }
 }
 
-void CminerDlg::CreateMetfile(const char * metfilefullname, const char * filepath, const char * filename)
+void CminerDlg::Create_METfile(const char * metfilefullname, const char * filepath, const char * filename)
 {
     int l;
     partfilecounter++;
@@ -5672,6 +6037,112 @@ void CminerDlg::CreateMetfile(const char * metfilefullname, const char * filepat
     }
 }
 
+void CminerDlg::sub_Repair_METfile(char * filename)
+{
+    int l;
+    l = strlen(filepath) + strlen(filename);
+    char filenamePRT[l + 1];
+    sprintf(filenamePRT, "%s%s", filepath, filename);
+    if (l > 4)
+    {
+        filenamePRT[l - 4] = 0;
+        if (!stat(filenamePRT, statbuffer))
+        {
+            Cmd4hash * hashPRT = new Cmd4hash();
+            hashPRT -> hashFile(filenamePRT, false, true);
+            if (statbuffer -> st_size == mfile -> mf_filesize)
+            {
+                if (hashPRT -> hashtableindex == mfile -> parts)
+                {
+                    wxFile * fpPRT = new wxFile(filenamePRT, wxFile::read);
+                    CMetfile * metfile = new CMetfile();
+                    sprintf(filenameTMP, "%s%s.new", filepath, filename);
+                    metfile -> Create(filenameTMP);
+                    metfile -> SetFilename(mfile -> mf_filename);
+                    metfile -> SetPartfilename(mfile -> mf_partfile);
+                    metfile -> SetFilesize(mfile -> mf_filesize);
+                    metfile -> SetFilehash(mfile -> checkid);
+                    metfile -> SetHashtable(mfile -> parts, mfile -> parts_hashtable);
+                    metfile -> ClearGaplist();
+                    metfile -> AddGap(0, statbuffer -> st_size);
+                    long pos, i, p;
+                    long start = 0, end = 0;
+                    long bytes = 0;
+                    char block[1025];
+                    long lbyte, lposEnd, lposStart, lcount;
+                    i = 0;
+                    p = 0;
+                    while (i < hashPRT -> hashtableindex)
+                    {
+                        p = i <<4;
+                        start = i * 9728000;
+                        end = start + 9728000;
+                        if (end > statbuffer -> st_size)
+                        {
+                            end = statbuffer -> st_size;
+                        }
+                        if (!memcmp(hashPRT -> hashtable + p, mfile -> parts_hashtable + p, 16))
+                        {
+                            metfile -> FillGap(start, end);
+                            bytes += end - start;
+                        }
+                        else
+                        {
+                            fpPRT -> Seek(start, wxFromStart);
+                            pos = start;
+                            lbyte = 0;
+                            lcount = 0;
+                            lposStart = start;
+                            lposEnd = start;
+                            while (pos < end)
+                            {
+                                (void) fpPRT -> Read(block, 1);
+                                if (lbyte == block[0])
+                                {
+                                    lcount++;
+                                }
+                                else
+                                {
+                                    if (lcount > 32)
+                                    {
+                                        if (lposEnd > (lposStart + 8192))
+                                        {
+                                            metfile -> FillGap(lposStart, lposEnd);
+                                            bytes += lposEnd - lposStart;
+                                        }
+                                        //gap überspringen
+                                        lposStart = pos;
+                                    }
+                                    lposEnd = pos;
+                                    lcount = 0;
+                                }
+                                lbyte = block[0];
+                                pos++;
+                            }
+                            if (lposEnd > (lposStart + 8192))
+                            {
+                                metfile -> FillGap(lposStart, lposEnd);
+                                bytes += lposEnd - lposStart;
+                            }
+                        }
+                        i++;
+                    }
+                    metfile -> SortGaplist();
+                    metfile -> WriteTo();
+                    delete metfile;
+                    delete fpPRT;
+                }
+            }
+            delete hashPRT;
+        }
+    }
+}
+
+void CminerDlg::Repair_METfile()
+{
+    sub_Repair_METfile(filename);
+}
+
 void CminerDlg::CreatePartfileMET(char * partfilename, char * filepath, char * filename)
 {
     FILE * tf = fopen(partfilename, "a");
@@ -5681,7 +6152,7 @@ void CminerDlg::CreatePartfileMET(char * partfilename, char * filepath, char * f
     }
 }
 
-void CminerDlg::CreateInfofileMET(char * infofilename, char * filepath, char * filename)
+void CminerDlg::Create_ISMfile(char * infofilename, char * filepath, char * filename)
 {
     FILE * tf = fopen(infofilename, "w+r");
     if (tf)
@@ -5706,24 +6177,10 @@ void CminerDlg::CreateInfofileMET(char * infofilename, char * filepath, char * f
         fprintf(tf, "---------------------------------------------------------------------------------\n");
         if (mfile -> parts)
         {
-            long start, end;
-            fprintf(tf, "Hashtable :\n");
-            for (int i0 = 0 ; i0 < mfile -> parts ; i0++)
-            {
-                start = i0 * 9728000;
-                end = start + 9727999;
-                if (end >= mfile -> mf_filesize)
-                {
-                    end = mfile -> mf_filesize - 1;
-                }
-                fprintf(tf, "%012ld-%012ld:", start + 1, end + 1);
-                for (int i1 = 0 ; i1 < 16 ; i1++)
-                {
-                    sprintf(keybuffer + i1 * 2, "%02x", mfile -> parts_hashtable[i0 * 16 + i1]);
-                }
-                fprintf(tf, " %s\n", keybuffer);
-            }
+            mfile -> WriteHashtable(tf);
+            fprintf(tf, "---------------------------------------------------------------------------------\n");
         }
+        mfile -> WriteGaplist(tf);
         fprintf(tf, "=================================================================================\n");
         fclose(tf);
     }
@@ -5850,7 +6307,7 @@ int CminerDlg::filecountTST(char * filename)
     return retcode;
 }
 
-void CminerDlg::Process_JPGfile(char * filepath, char * filename)
+void CminerDlg::Process_JPGfile(char * filename)
 {
     int psize;
     int asciiPointer = 0;
@@ -6024,15 +6481,7 @@ void CminerDlg::Process_JPGfile(char * filepath, char * filename)
                             sprintf(buffer + strlen(buffer), "/%dx%d", file_width, file_height);
                             break;
                         case 4:
-                            if (p_JPGaddRStoFN)
-                            {
-                                sprintf(buffer + strlen(buffer), "/%dx%d."
-                                , file_width, file_height);
-                            }
-                            else
-                            {
-                                sprintf(buffer + strlen(buffer), "/");
-                            }
+                            sprintf(buffer + strlen(buffer), "/");
                             if (p_JPGaddFNtoTA)
                             {
                                 char * fn;
@@ -6041,6 +6490,11 @@ void CminerDlg::Process_JPGfile(char * filepath, char * filename)
                                 {
                                     sprintf(buffer + strlen(buffer), "%s.", fn);
                                 }
+                            }
+                            if (p_JPGaddRStoFN)
+                            {
+                                sprintf(buffer + strlen(buffer), "%dx%d."
+                                , file_width, file_height);
                             }
                             sprintf(buffer + strlen(buffer), "%s.jpg", hash1);
                             break;
@@ -6149,7 +6603,7 @@ void CminerDlg::Process_JPGfile(char * filepath, char * filename)
     jpgfile = NULL;
 }
 
-void CminerDlg::Process_GIFfile(char * filepath, char * filename)
+void CminerDlg::Process_GIFfile(char * filename)
 {
     count_GIFfilesprocessed++;
     wxFile * pf = NULL;
@@ -6538,5 +6992,475 @@ unsigned int CminerDlg::GetUint32i(Cavifile * source, unsigned char * buffer)
         uint32 = (uint32 >> 8) | (buffer[count++] << 24);
     }
     return uint32;
+}
+
+int CminerDlg::filterNames(char *& filename, char *& sourcename)
+{
+    int l = 1;
+    if (dirbufferDeep == 1)
+    {
+        if (lms)
+        {
+            if (strstr(sourcename, matchstart))
+            {
+                lms = 0;
+            }
+        }
+        if (!lms)
+        {
+            if (lmd)
+            {
+                if (!strstr(filename, matchdomain))
+                {
+                    l = 0;
+                }
+                else
+                {
+                    printf("matchbase: %s\n", sourcename);
+                }
+            }
+        }
+        else
+        {
+            l = 0;
+        }
+    }
+    else if(!lms)
+    {
+        if (lmu)
+        {
+            if (!strstr(sourcename, matchurl))
+            {
+                l = 0;
+            }
+            else
+            {
+                printf("matchall: %s\n", sourcename);
+            }
+        }
+    }
+    else
+    {
+        l = 0;
+    }
+    if (l)
+    {
+        if (p_debugonoff)
+        {
+            sprintf(buffer, "%s(%ld)\n", sourcename
+            , (long) statbuffer -> st_size);
+            Wgui(buffer);
+        }
+    }
+    return l;
+}
+
+void CminerDlg::executeFiletype()
+{
+    hash -> hashtableindex = 0;
+    filetype = htmp0 -> GetFiletype(filename);
+    fileextension = htmp0 -> GetExtension();
+    count_ALLfiles++;
+    filesize = statbuffer -> st_size;
+    size_ALLfiles += filesize;
+    if (filesize > 500000)
+    {
+        sprintf(buffer, "%ld: %s\n", filesize, sourcename);
+        FILE * fp = fopen("bigfile.log", "a");
+        fprintf(fp, buffer);
+        fclose(fp);
+    }
+    filepath = dirbuffer[dirbufferDeep];
+    timet0 = time(NULL);
+    switch (filetype)
+    {
+    case 1:
+        if (!p_removedupext)
+        {
+            Process_STDfile(filename);
+        }
+        break;
+    case 4:
+        if (p_delHtmPxxCxx || p_simHtmPxxCxx)
+        {
+            if (htmp0 -> GetFilesubtype() < 99)
+            {
+                if (!p_simHtmPxxCxx)
+                {
+                    (void) unlink(sourcename);
+                }
+                shp_fullsize += statbuffer -> st_size;
+                sprintf(buffer, "del(%ld):%s\n"
+                , shp_fullsize, sourcename);
+                Wgui(buffer);
+            }
+        }
+        else if(!p_removedupext)
+        {
+            switch (htmp0 -> GetFilesubtype())
+            {
+            case 0:
+                Process_STDfile(filename);
+                break;
+            case 101:
+                Process_PRYfile(filename);
+                break;
+            default:
+                if (htmp0 -> GetFilesubtype() < 99)
+                {
+                    if (p_HTMparse)
+                    {
+                        Process_HTMfile(filename);
+                    }
+                    else
+                    {
+                        Process_STDfile(filename);
+                    }
+                }
+                else
+                {
+                    Process_STDfile(filename);
+                }
+                break;
+            }
+        }
+        break;
+    case 5:
+        if (p_delHtmPxxCxx || p_simHtmPxxCxx)
+        {
+            if (htmp0 -> GetFilesubtype() < 99)
+            {
+                if (!p_simHtmPxxCxx)
+                {
+                    (void) unlink(sourcename);
+                }
+                shp_fullsize += statbuffer -> st_size;
+                sprintf(buffer, "del(%ld):%s\n"
+                , shp_fullsize, sourcename);
+                Wgui(buffer);
+            }
+        }
+        else if(!p_removedupext)
+        {
+            if (p_WD3parse)
+            {
+                Process_WD3file(filename);
+            }
+        }
+        break;
+    case 6:
+        //vidfiles
+        if (!p_removedupext)
+        {
+            switch (htmp0 -> GetFilesubtype())
+            {
+            case 1:
+                if (p_AVIparse)
+                {
+                    Process_AVIfile(filename);
+                }
+                break;
+            }
+            if (p_VIDexportMD4 | p_VIDimportMD4)
+            {
+                Process_VIDEOfile(dirbuffer[dirbufferDeep], filename);
+            }
+            else
+            {
+                Process_STDfile(filename);
+            }
+        }
+        break;
+    case 7:
+        if (!p_removedupext)
+        {
+            switch (htmp0 -> GetFilesubtype())
+            {
+            case 1:
+                if (p_JPGparse)
+                {
+                    Process_JPGfile(filename);
+                }
+                else
+                {
+                    Process_STDfile(filename);
+                }
+                break;
+            case 3:
+                if (p_GIFparse)
+                {
+                    Process_GIFfile(filename);
+                }
+                else
+                {
+                    Process_STDfile(filename);
+                }
+                break;
+            default:
+                Process_STDfile(filename);
+                break;
+            }
+        }
+        break;
+    case 8:
+        //.part-files
+        if (p_PRTparse)
+        {
+            Process_PRTfile();
+        }
+        else
+        {
+            Process_STDfile(filename);
+        }
+        break;
+    case 9:
+        //.met-files
+        if (p_METparse)
+        {
+            Process_METfile(filename);
+        }
+        else
+        {
+            Process_STDfile(filename);
+        }
+        break;
+    case 11:
+        if (p_DKTparse)
+        {
+            Process_DKTfile(dirbuffer[dirbufferDeep], filename);
+        }
+        else
+        {
+            Process_STDfile(filename);
+        }
+        //dup-files:
+    case 91:
+        Process_DUPfile();
+        break;
+    case 92:
+        //.bak-files
+        break;
+    case 93:
+        //.ism-files(infofiles)
+        if (p_ISMparse)
+        {
+            Process_ISMfile();
+        }
+        else
+        {
+            Process_STDfile(filename);
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+void CminerDlg::enterSubdir(const char * subdirname)
+{
+    if (dirbufferDeep == 1)
+    {
+        FILE * fp = fopen("dirproto.txt", "a");
+        fprintf(fp, "%s\n", sourcename);
+        fclose(fp);
+    }
+    dirbufferDeep++;
+    if (dirbuffer[dirbufferDeep])
+    {
+        free(dirbuffer[dirbufferDeep]);
+    }
+    dirbuffer[dirbufferDeep] =
+    (char *) malloc(strlen(dirbuffer[dirbufferDeep - 1]) + strlen(subdirname) + 2);
+    sprintf(dirbuffer[dirbufferDeep], "%s%s/"
+    , dirbuffer[dirbufferDeep - 1], subdirname);
+    if (subdir[dirbufferDeep])
+    {
+        closedir(subdir[dirbufferDeep]);
+    }
+    subdir[dirbufferDeep] = opendir(dirbuffer[dirbufferDeep]);
+    if (!subdir[dirbufferDeep])
+    {
+        free(dirbuffer[dirbufferDeep]);
+        dirbuffer[dirbufferDeep] = (char *) malloc(1);
+        dirbuffer[dirbufferDeep][0] = 0;
+        dirbufferDeep--;
+    }
+}
+
+void CminerDlg::leaveSubdir()
+{
+    if (subdir[dirbufferDeep])
+    {
+        closedir(subdir[dirbufferDeep]);
+        subdir[dirbufferDeep] = NULL;
+        sprintf(buffer
+        , "Subdirs: %ld  Files: %ld  PDScount: %d  PDSfiles: %d  PDSbytes: %ld/%lu"
+        , count_subdirsprocessed, count_ALLfiles, pds_count
+        , pds_filecount, size_PDSfiles, size_ALLfiles);
+        wxMutexGuiEnter();
+        stext_C1 -> SetLabel(buffer);
+        wxMutexGuiLeave();
+    }
+    dirbufferDeep--;
+}
+
+void CminerDlg::sampleGetBase()
+{
+    int l = 0, i = 0, status = 0;
+    unsigned int j;
+    if (!name0deep)
+    {
+        l = strlen(filename);
+        if (l)
+        {
+            --l;
+            if (filename[l] == ')')
+            {
+                //specialdirfile
+                i = l;
+                do
+                {
+                    i--;
+                    if (filename[i] == '(')
+                    {
+                        if (!status)
+                        {
+                            delete[] name0type;
+                            name0type = new char[l - i];
+                            name0type[l - i - 1] = 0;
+                            strncpy(name0type, filename + i + 1, l - i - 1);
+                            if (i)
+                            {
+                                strncpy(name0, filename, i);
+                            }
+                            name0[i] = 0;
+                            j = 0;
+                            while (j < strlen(name0type))
+                            {
+                                if (name0type[j] == ',')
+                                {
+                                    name0type[j] = 0;
+                                    j += 1000;
+                                }
+                                else
+                                {
+                                    j++;
+                                }
+                            }
+                            i = - i;
+                            status++;
+                        }
+                    }
+                }
+                while (i > 0);
+                if (strlen(name0type))
+                {
+                    if (!strlen(name0))
+                    {
+                        celdeep = dirbufferDeep;
+                    }
+                    else if(!name0deep)
+                    {
+                        name0count = 0;
+                        name0fcount = 0;
+                        name0deep = dirbufferDeep;
+                        if (p_createsample)
+                        {
+                            if (sampledirname)
+                            {
+                                delete [] sampledirname;
+                            }
+                            sampledirname = new char[strlen(name0) + 1];
+                            strcpy(sampledirname, name0);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void CminerDlg::storeSubhash(int mode, unsigned char * subHash, unsigned char * mainHash, char * datas)
+{
+    memset(dbSHkey.ptr, 0, 33);
+    switch (mode)
+    {
+    case 1:
+        memcpy(dbSHkey.ptr, subHash, 16);
+        memcpy(dbSHkey.ptr + 16, mainHash, 16);
+        break;
+    default:
+        memcpy(dbSHkey.ptr, mainHash, 16);
+        break;
+    }
+    dbSHdata = dbSH -> fetchKey(1, dbSHkey);
+    if (!dbSHdata.ptr)
+    {
+        dbSHdata.size = strlen(datas) + 1;
+        dbSHdata.ptr = (unsigned char *) malloc(dbSHdata.size + 1);
+        memset(dbSHdata.ptr, 0, dbSHdata.size);
+        memcpy(dbSHdata.ptr, datas, dbSHdata.size);
+        (void) dbSH -> storeData(1, dbSHkey, dbSHdata);
+    }
+    free(dbSHdata.ptr);
+    dbSHdata.ptr = NULL;
+}
+
+int CminerDlg::checkSubhash(unsigned char * subHash, int partid)
+{
+    int retcode;
+    memset(buffer, 0, BUFFERSIZE);
+    memset(dbSHkey.ptr, 0, 33);
+    memcpy(dbSHkey.ptr, subHash, 16);
+    do
+    {
+        retcode = 0;
+        dbSHdata = dbSH -> getNextKey(1, dbSHkey);
+        if (dbSHdata.ptr)
+        {
+            if (!memcmp(dbSHkey.ptr, subHash, 16))
+            {
+                if (dbSHdata.ptr[0] > '4')
+                {
+                    retcode = 1 + atoi((char *) dbSHdata.ptr + 2);
+                }
+                else
+                {
+                    retcode = - 1;
+                }
+                free(dbSHdata.ptr);
+                dbSHdata.ptr = NULL;
+                if (retcode == (1 + partid))
+                {
+                    memcpy(dbSHkey.ptr, dbSHkey.ptr + 16, 16);
+                    memset(dbSHkey.ptr + 16, 0, 17);
+                    dbSHdata = dbSH -> fetchKey(1, dbSHkey);
+                    if (dbSHdata.ptr)
+                    {
+                        if (filesize > atol((char *) dbSHdata.ptr + 2))
+                        {
+                            retcode = - 1;
+                        }
+                        else if(dbSHdata.size > BUFFERSIZE)
+                        {
+                            memcpy(buffer, (char *) dbSHdata.ptr, BUFFERSIZE);
+                        }
+                        else
+                        {
+                            memcpy(buffer, (char *) dbSHdata.ptr, dbSHdata.size);
+                        }
+                        free(dbSHdata.ptr);
+                        dbSHdata.ptr = NULL;
+                    }
+                }
+                else
+                {
+                    retcode = - 1;
+                }
+            }
+        }
+    }
+    while (retcode < 0);
+    return retcode;
 }
 

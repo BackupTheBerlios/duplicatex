@@ -90,6 +90,8 @@ extraResourceOptions=
 8=minerdlg.cpp
 9=picframe.cpp
 10=htmlpage.cpp
+11=avifile.cpp
+12=jpgfile.cpp
 [Header]
 1=duplicatex.h
 2=metfile.h
@@ -102,8 +104,10 @@ extraResourceOptions=
 9=minerdlg.h
 10=picframe.h
 11=htmlpage.h
+12=avifile.h
+13=jpgfile.h
 [Resource]
 [Other]
 [History]
+minerdlg.cpp,228342
 minerdlg.h,0
-minerdlg.cpp,0

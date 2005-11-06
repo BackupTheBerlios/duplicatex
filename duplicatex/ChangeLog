@@ -45,3 +45,9 @@ Version 1.0.0
 *adding special avi-filetype-support
 *changes in gui
 *restructured sources
+
+2005-11-06
+----------
+*repair-function for ed2k-MET-files
+*create-function for ed2k-MET-files (for PART- and other filetypes)
+*create-function for ISM-files (for all filetypes)
